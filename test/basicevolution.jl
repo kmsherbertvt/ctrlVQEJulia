@@ -3,10 +3,10 @@
 NOTE: This is not (yet) meant to be a fully robust unit-test framework.
 =#
 
-include("../src/device.jl")
-include("../src/evolve.jl")
-include("../src/pulse.jl")
 include("../src/utils.jl")
+include("../src/device.jl")
+include("../src/pulse.jl")
+include("../src/evolve.jl")
 
 
 module UnitTesting
