@@ -27,7 +27,19 @@ Scripts are located in the `script/` directory and are run from the project dire
 - `evolvetest` I've replicated Oinam's evolution code; this script runs it and checks that its results more-or-less match.
   You can run the code yourself to see how much more-or-less is; it gets worse as you increase the duration `T`,
   but it's close enough that I think I'm okay attributing it to different round-off errors. Maybe.
+- `scalarmultest` I wasn't entirely certain if I should consider Julia's scalar * vector multiplication as better or worse
+  than the element-wise version scalar .* multiplication. There is no appreciable difference.
+- `lanczostest.jl` This script just runs each of the Lanczos evolution methods against the already-tested Trotter method.
+  They all match. ^_^
+- `suzukitest.jl` More careful benchmarking to show how error and time complexity compare between each evolution method.
+  This file just scales up `numsteps`. The more important scaling depends on `N=nstates^nqubits`.
+  Analytically, I'd expect Trotter to scale by `N^3 * numsteps`, while Lanczos will scale by `N^3 + N^2 * numsteps`.
+  That seems consistent with the specific value of `N=9` tested in this file: `Trotter` is about 10 times slower.
 
+  Meanwhile, error behaves as expected:
+  exact diagonalization of $\exp(-i Δt H_C)$ in `Lanczos` gives essentially identical results to `Trotter`.
+  Suzuki expansions of that operator yield somewhat faster times at the cost of noticeable error.
+  What error is acceptable is a judgement call, though in my opinion `suzukiorder=2` should be considered the gold standard.
 
 
 
@@ -74,9 +86,10 @@ The `Documenter` documentation offers some solutions to this (see the big blue n
 > julia script/<SCRIPT NAME>.jl>
 ```
 
-In order to run `trottertest.jl`, you'll need the `Plots` package.
+In order to run `trottertest.jl`, you'll need the `Plots` package,
+  and in order to run `suzukitest.jl`, you'll need the `BenchmarkTools` package.
 Type `julia` to enter the REPL, then type a `]` character to enter Pkg mode.
 ```
-pkg> add Plots
+pkg> add <Package Name>
 ```
 After it has installed, `<backspace>` gets you back to the regular REPL mode.

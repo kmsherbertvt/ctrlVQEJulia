@@ -1,4 +1,8 @@
-#= Code to evolve a quantum-controlled system in time. =#
+#= Code to evolve a quantum-controlled system in time.
+
+TODO: Just occurred to me, do we need to tell Julia our matrices are Hermitian for eigen()?
+
+=#
 
 # include("./utils.jl")
 # include("./pulse.jl")
@@ -15,8 +19,6 @@ abstract type EvolutionMode end
 struct Trotter <: EvolutionMode end
 struct Lanczos <: EvolutionMode end
 
-
-
 """
     evolve(
         ψI::AbstractVector{<:Number},
@@ -31,10 +33,11 @@ The amount of time evolved is determined by the duration of the pulses,
     which are assumed to have equal duration.
 
 # Arguments
-- `ψI` initial statevector of `n` qubits each with `nstates` levels
+- `ψI` initial statevector of `n>0` qubits each with `nstates` levels
 - `pulses` vector of `n` pulse templates
 - `device` the `n`-qubit device giving qubit frequencies and couplings
 - `numsteps` the number of discrete time units to simulate (ie. Trotter steps)
+             must be positive integer
 """
 evolve(
     ψI::AbstractVector{<:Number},
@@ -44,13 +47,23 @@ evolve(
 ) = evolve(ψI, pulses, device, Trotter; numsteps=numsteps)
 
 
+"""
+    evolve(
+        ψI::AbstractVector{<:Number},
+        pulses::AbstractVector{<:Pulses.PulseTemplate},
+        device::Devices.Device,
+        ::Type{Trotter};
+        numsteps::Integer = 2000
+    )
+
+Replicate Trotter method in ctrlq repository,
+    which operates in the device basis and treats each step independently.
+
+"""
 function evolve(
     ψI::AbstractVector{<:Number},
-    # ψI::Vector{Int64},
     pulses::AbstractVector{<:Pulses.PulseTemplate},
-    # pulses::Vector{Pulses.BasicSquarePulse},
     device::Devices.Device,
-    # device::Devices.Transmon,
     ::Type{Trotter};
     numsteps::Integer = 2000
 )
@@ -62,16 +75,8 @@ function evolve(
 
     # PREPARE TIME DISCRETIZATION
     T = length(pulses[1])                   # TOTAL TIME
-        # NOTE: Currently throws error if `pulses` is empty.
-        #       We already specify `length(pulses)==length(device)` as a precondition,
-        #           but technically `n=0` should maybe be valid..?
-        # TODO: Either accommodate in code or forbid in documentation.
     t = range(0,T,numsteps)                 # TIME GRID
-        # TODO: My instinct says we skip t=0?
-        #       If so, range up to `numsteps+1`
-        #           and start from t[2].
-    Δt = t[2]-t[1]                          # DURATION OF EACH TROTTER STEP
-        # TODO: Control for `numsteps < 2`. Gosh, this section is awkward..!
+    Δt = numsteps > 1 ? t[2]-t[1] : T       # DURATION OF EACH TROTTER STEP
 
             # TEMP: Oinam calculates Δt incorrectly, I think. Uncomment below to match his.
             # Δt = T / numsteps
@@ -90,7 +95,6 @@ function evolve(
 
     # ROTATE INTO DEVICE BASIS
     ψ = UDT * ψI
-    # ψ = I * ψI
 
     # PERFORM TIME EVOLUTION
     for i ∈ 1:numsteps
@@ -105,12 +109,10 @@ function evolve(
 
         # CONJUGATE WITH ACTION OF (DIAGONALIZED) DEVICE HAMILTONIAN
         exp_itΛD = Diagonal(exp.((im*t[i]) * ΛD))
-                # TODO: Any reason to use .* for scalar multiplication? Instinct says no.
         HIC = exp_itΛD * HC * exp_itΛD'     # INTERACTION-PICTURE CONTROL HAMILTONIAN
 
         # APPLY ACTION OF THE INTERACTION-PICTURE CONTROL HAMILTONIAN
         ψ = exp( (-im*Δt) * HIC) * ψ
-                # TODO: Any reason to use .* for scalar multiplication? Instinct says no.
     end
 
     # ROTATE *OUT* OF DEVICE BASIS
@@ -119,7 +121,20 @@ function evolve(
 
 end
 
+"""
+    evolve(
+        ψI::AbstractVector{<:Number},
+        pulses::AbstractVector{<:Pulses.PulseTemplate},
+        device::Devices.Device,
+        ::Type{Lanczos};
+        numsteps::Integer = 2000,
+        suzukiorder::Integer = 2,
+    )
 
+Apply Lanczos method, combining device action/adjoint into a single repeat step.
+    This encourages operating in qubit basis, permitting faster ``H_C`` exponentiation.
+
+"""
 function evolve(
     ψI::AbstractVector{<:Number},
     pulses::AbstractVector{<:Pulses.PulseTemplate},
@@ -128,9 +143,217 @@ function evolve(
     numsteps::Integer = 2000,
     suzukiorder::Integer = 2,
 )
-    error("Not yet implemented!")
+    ######################################################################################
+    #                           PRE-SIMULATION SETUP
+
+    # INFER NUMBER OF QUBITS AND STATES
+    N = length(ψI)                          # SIZE OF STATEVECTOR
+    n = length(device)                      # NUMBER OF QUBITS
+    nstates = round(Int, N^(1/n))           # NUMBER OF LEVELS ON EACH QUBIT
+        # TODO: I feel as though there should be an integer-stable way of doing this...
+
+    # PREPARE TIME DISCRETIZATION
+    T = length(pulses[1])                   # TOTAL TIME
+    t = range(0,T,numsteps)                 # TIME GRID
+    Δt = numsteps > 1 ? t[2]-t[1] : T       # DURATION OF EACH TROTTER STEP
+
+    # CONSTRUCT AND DIAGONALIZE THE DEVICE HAMILTONIAN
+    HD = Devices.static_hamiltonian(device, nstates)
+    ΛD, UD = eigen(HD)
+    V = UD * Diagonal(exp.((-im*Δt) * ΛD)) * UD'    # REPEATED DEVICE ACTION
+
+    # PREPARE CANONICAL OPERATORS
+    a = Utils.a_matrix(nstates)             # SINGLE-QUBIT ANNIHILATION OPERATOR
+    Q =      (a + a')                       # CANONICAL COORDINATE OPERATOR
+    P = im * (a - a')                       # CANONICAL   MOMENTUM OPERATOR
+
+
+    # IF SUZUKI MODE IS ACTIVE, PRE-CALCULATE CANONICAL ROTATIONS
+    if suzukiorder > 0
+        # CONSTRUCT AND DIAGONALIZE CANONICAL OPERATORS
+        ΛQq, UQq = eigen(Q)
+        ΛPq, UPq = eigen(P)
+
+        # CONSTRUCT PHASE ROTATION MULTIPLIERS (to be scaled by Ω, ν at each time step)
+        @assert ΛQq ≈ ΛPq                   # THERE'S ONLY ACTUALLY ONE SET OF EIGENVALUES
+        _iΔtΛ = -im * Δt * ΛQq              # THIS WILL DRIVE ALL DYNAMIC TIME EVOLUTIONS
+
+        # CONSTRUCT FULL HILBERT-SPACE CANONICAL ROTATION OPERATORS
+        UQ, UP = Matrix(I,1,1), Matrix(I,1,1)
+        for q ∈ 1:n
+            UQ = kron(UQ, UQq)
+            UP = kron(UP, UPq)
+        end
+    end
+
+    # INTERMEDIATE CONTROL BASIS ROTATIONS (Not needed in lower suzuki orders.)
+    UPQ = (suzukiorder >= 1) && UQ' * UP    # ROTATES FROM P -> Q BASIS
+    UQP = (suzukiorder >= 2) && UP' * UQ    # ROTATES FROM Q -> P BASIS
+
+    # PREPARE LIGAND OPERATOR TO BIND EACH TIME STEP
+    L = (
+        (suzukiorder == 0) ?       V        #      APPLY DEVICE ACTION IN QUBIT BASIS
+      : (suzukiorder == 1) ? UP' * V * UQ   # Q BASIS -> DEVICE ACTION -> P BASIS
+      : (suzukiorder == 2) ? UQ' * V * UQ   # Q BASIS -> DEVICE ACTION -> Q BASIS
+      : error("`suzukiorder > 2` is not implemented.")
+    )
+
+
+
+
+    ######################################################################################
+    #                   SUZUKI-ORDER-SPECIFIC AUXILIARY VARIABLES
+    #
+    #=
+    This part is weird -
+        we're using an auxiliary function to summarize the routine for each Trotter step,
+        but each Suzuki-order needs a different set of auxiliary variables.
+    So, the function takes three vaguely-named variables M1, M2, M3.
+        The values they take are set here.
+
+    TODO: a more elegant solution would be to let these auxiliary variables live
+        in a global scope. Best is a Dict( nstates => <the thing> ).
+        The auxiliary function can just assume that, if it's been called,
+            the appropriate dictionaries have been pre-filled.
+        Then we can replace `M1, M2, M3` with just `nstates`.
+    =#
+    M1 = (suzukiorder == 0) ? Q : _iΔtΛ         # Exact solution needs Q and P to build HC.
+    M2 = (suzukiorder == 0) ? P : UPQ           # Suzuki needs _iΔtΛ for time evolution,
+                                                #   and UPQ to connect the two factors.
+    M3 = (suzukiorder == 2) ? UQP : nothing     # suzukiorder=2 connects a third factor...
+
+
+    ######################################################################################
+    #                              BEGIN TIME EVOLUTION
+
+    # FIRST STEP: exp(-𝒊 HD t[0]), but t[0]=0 so this is an identity operation.
+    ψ = I * ψI
+
+    # BASIS PRE-ROTATION (Each suzuki order evolves control in a different starting basis.)
+    if suzukiorder == 1;    ψ .= UP' * ψ;   end     # PRE-ROTATE INTO P BASIS
+    if suzukiorder == 2;    ψ .= UQ' * ψ;   end     # PRE-ROTATE INTO Q BASIS
+
+    # FIRST CONTROL EVOLUTION   (treated separately to give `L` proper "join" behavior)
+    _evolvecontrol!(ψ, pulses, t[1], Δt, suzukiorder, M1, M2, M3)
+
+    # TROTTER STEPS
+    for i ∈ 2:numsteps
+        # CONNECT EACH TIME STEP WITH THE DEVICE ACTION
+        ψ .= L * ψ
+
+        # PERFORM CONTROL EVOLUTION
+        _evolvecontrol!(ψ, pulses, t[i], Δt, suzukiorder, M1, M2, M3)
+    end
+
+    # BASIS POST-ROTATION (Suzuki approximation ends in a different ending basis.)
+    if suzukiorder > 0;     ψ .= UQ * ψ;    end     # POST-ROTATE *OUT* OF Q BASIS
+
+    # LAST STEP: exp(𝒊 HD t[numsteps])), ie. exp(-𝒊 HD T)
+    ψ .= UD' * ψ                        # ROTATE INTO DEVICE BASIS
+    ψ .*= exp.( (im*T) * ΛD)            # ROTATE PHASES FOR ONE LAST TIME EVOLUTION
+    ψ .= UD  * ψ                        # ROTATE *OUT* OF DEVICE BASIS
+
+    return ψ
 end
 
-# display(evolve([0,1],[Pulses.BasicSquarePulse(10.0,29.0,[1.0,-1.0],[5])],Devices.Transmon([1],[1],Dict{Devices.QubitCouple,Number}()),Trotter))
+"""
+    _evolvecontrol!(
+        ψ::AbstractVector{<:Number},
+        pulses::AbstractVector{<:Pulses.PulseTemplate},
+        t, Δt,
+        suzukiorder::Integer,
+        M1, M2, M3
+    )
+
+Auxiliary function to evolve control Hamiltonian in time.
+
+This is a strange function, in that its starting state `ψ`
+    and its arguments `M1`, `M2`, `M3` are very different
+    depending on value of `suzukiorder`.
+
+`suzukiorder == 0`
+    `ψ` is in qubit basis
+    `M1` is matrix representation of canonical operator Q ≡    a+a'
+    `M2` is    "           "      of     "         "    P ≡ -i(a-a')
+    `M3` is unused
+
+`suzukiorder == 1`
+    `ψ` is in so-called "P" basis (ie. rotated to diagonal basis of P on each qubit)
+    `M1` is eigenvalues of Q operator (or P, they're the same) scaled by -𝒊Δt
+    `M2` is unitary matrix to rotate from P -> Q basis
+    `M3` is unused
+
+`suzukiorder == 2`
+    `ψ` is in so-called "Q" basis (ie. rotated to diagonal basis of Q on each qubit)
+    `M1` is eigenvalues of Q operator (or P, they're the same) scaled by -𝒊Δt
+    `M2` is unitary matrix to rotate from P -> Q basis
+    `M3` is unitary matrix to rotate from Q -> P basis
+
+TODO: The `ψ` will remain weird.
+    But `M1`, `M2`, `M3` should be moved to global Dicts, keyed by `nstates`
+    (which can be passed as an auxiliary argument, or inferred by `ψ` and `pulses`).
+
+"""
+function _evolvecontrol!(
+    ψ::AbstractVector{<:Number},
+    pulses::AbstractVector{<:Pulses.PulseTemplate},
+    t, Δt,
+    suzukiorder::Integer,
+    M1, M2, M3
+)
+    n = length(pulses)
+
+    # INTERPRET M1, M2 ACCORDING TO SUZUKI ORDER, AND INITIALIZE FULL-QUBIT-SPACE OPERATORS
+    if     suzukiorder == 0
+        Q    ,   P, ___ = M1, M2, M3    # CANONICAL OPERATORS
+        exp_iΔtHC = Matrix(I,1,1)       # EVOLUTION OF ``H_C``
+    else
+        _iΔtΛ, UPQ, UQP = M1, M2, M3    # ROTATE FROM Q -> P BASIS
+        EQ, EP = ones(1), ones(1)       # EXPONENTIATED PHASES OF Q AND P COMPONENTS
+    end
+
+    # CONSTRUCT DIAGONALIZED PHASE ROTATIONS
+    #   EXCEPT `suzukiorder==0`, which directly constructs qubit-basis operator.
+    for q ∈ 1:n
+        # EXTRACT TIME-DEPENDENT COEFFICIENTS
+        Ωq = Pulses.amplitude(pulses[q], t)
+        νq = Pulses.frequency(pulses[q], t)
+        zq = Ωq * exp(im*νq*t)
+        xq, yq = real(zq), imag(zq)
+
+        # SUZUKI ORDER 2: EVOLVE Q-COMPONENT ONLY HALF AS FAR (but we'll apply it twice)
+        if suzukiorder == 2;    xq /= 2;    end
+
+        # EVOLVE QUBIT IN TIME, AND EXTEND FULL-QUBIT OPERATOR
+        if     suzukiorder == 0
+            HCq = (xq*Q) + (yq*P)           # SINGLE-QUBIT CONTROL HAMILTONIAN, QUBIT BASIS
+            eHCq = exp((-im*Δt) * HCq)      # TIME-EVOLVED
+            exp_iΔtHC = kron(exp_iΔtHC, eHCq)   # ATTACHED TO FULL-QUBIT OPERATOR
+        else
+            EQq = exp.(xq * _iΔtΛ)          # SINGLE-QUBIT TIME-EVOLVED PHASE, Q COMPONENT
+            EQ = kron(EQ, EQq )                 # ATTACHED TO FULL-QUBIT OPERATOR
+
+            EPq = exp.(yq * _iΔtΛ)          # SINGLE-QUBIT TIME-EVOLVED PHASE, P COMPONENT
+            EP = kron(EP, EPq )                 # ATTACHED TO FULL-QUBIT OPERATOR
+        end
+    end
+
+    # APPLY ROTATIONS AND PHASES
+    if     suzukiorder == 0
+        ψ .= exp_iΔtHC * ψ          # APPLY FULL-BODY EVOLUTION OPERATOR
+    elseif suzukiorder == 1
+        ψ .*= EP                    # ROTATE PHASES FOR TIME EVOLUTION (P BASIS)
+        ψ .= UPQ * ψ                # ROTATE FROM P -> Q BASIS
+        ψ .*= EQ                    # ROTATE PHASES FOR TIME EVOLUTION (Q BASIS)
+    elseif suzukiorder == 2
+        ψ .*= EQ                    # ROTATE PHASES FOR TIME EVOLUTION (Q BASIS)
+        ψ .= UQP * ψ                # ROTATE FROM Q -> P BASIS
+        ψ .*= EP                    # ROTATE PHASES FOR TIME EVOLUTION (P BASIS)
+        ψ .= UPQ * ψ                # ROTATE FROM P -> Q BASIS
+        ψ .*= EQ                    # ROTATE PHASES FOR TIME EVOLUTION (Q BASIS, 2nd time)
+    else
+        error("`suzukiorder > 2` is not implemented.")
+    end
+end
 
 end
