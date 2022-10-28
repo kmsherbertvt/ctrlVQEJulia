@@ -9,7 +9,7 @@ using ..Utils
 struct QubitCouple
     q1::Integer
     q2::Integer
-    # INNER CONSTRUCTOR: Constrain order so that `Un..Pair(q1,q2) == Un..Pair(q2,q1)`.
+    # INNER CONSTRUCTOR: Constrain order so that `Qu...ple(q1,q2) == Qu...ple(q2,q1)`.
     QubitCouple(q1, q2) = q1 > q2 ? new(q2, q1) : new(q1, q2)
 end
 
@@ -53,6 +53,7 @@ static_hamiltonian(device::Device, nstates::Integer=2) = error("Not Implemented"
         ω::AbstractVector{<:Number},
         δ::AbstractVector{<:Number},
         gmap::AbstractDict{QubitCouple,<:Number},
+        n::Integer=length(ω),
     )
 
 A device using transmons as qubits (eg. superconducting quantum computers).
@@ -66,6 +67,7 @@ Device couplings are given as symmetric coupling constants between pairs of qubi
 - `δ` list of `n` anharmonicities of each qubit
 - `gmap` keys are qubit pairs (eg. `QubitCouple(1,2)` pairs the qubits indexed 1 and 2),
       and values are static coupling rates
+- `n` number of qubits (defaults to length of `ω`)
 
 """
 struct Transmon <: Device
@@ -73,17 +75,16 @@ struct Transmon <: Device
     ω::AbstractVector{<:Number}
     δ::AbstractVector{<:Number}
     gmap::AbstractDict{QubitCouple,<:Number}
-    # INNER CONSTRUCTOR: Specify `n` and validate qubit couplings.
+    # INNER CONSTRUCTOR: Truncate structures down to n qubits.
     function Transmon(
         ω::AbstractVector{<:Number},
         δ::AbstractVector{<:Number},
         gmap::AbstractDict{QubitCouple,<:Number},
+        n::Integer=length(ω),
     )
-        n = length(ω)
-        n == length(δ) || error("ω and δ must have same size.")
-        for (pair, g) ∈ gmap
-            (1 <= pair.q1 <= pair.q2 <= n) || error("Bad qubit index in qubit couplings.")
-        end
+        ω = ω[1:n]
+        δ = δ[1:n]
+        gmap = Dict(pair=>g for (pair, g) ∈ gmap if 1 <= pair.q1 <= pair.q2 <= n)
         return new(n, ω, δ, gmap)
     end
 end
