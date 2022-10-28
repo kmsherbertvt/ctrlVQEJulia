@@ -78,10 +78,14 @@ end
 frequency(pt::BasicSquarePulse, t::Number) = pt.frequency
 
 amplitude(pt::BasicSquarePulse, t::Number) = (
-        # DETERMINE WHICH AMPLITUDE TO TAKE, BASED ON WHERE `t` FALLS IN `timesteps`
-        ix = findfirst(steptime -> t < steptime, pt.steptimes);
-        # IF `ix` IS `nothing`, `t` IS AFTER ALL `timesteps`
-        return isnothing(ix) ? pt.amplitudes[end] : pt.amplitudes[ix]
-    )
+    # EVOLVING AT TIME 0 SHOULDN'T *DO* ANYTHING, SO SPIT OUT ZERO
+    if t == 0;  return 0;   end;
+    # TODO: I don't know if this is the most physically sensible way to enforce this.
+
+    # DETERMINE WHICH AMPLITUDE TO TAKE, BASED ON WHERE `t` FALLS IN `timesteps`
+    ix = findfirst(steptime -> t < steptime, pt.steptimes);
+    # IF `ix` IS `nothing`, `t` IS AFTER ALL `timesteps`
+    return isnothing(ix) ? pt.amplitudes[end] : pt.amplitudes[ix]
+)
 
 end

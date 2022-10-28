@@ -32,7 +32,7 @@ end
     @test Pulses.frequency(pt, 2.5) == 20
     @test Pulses.frequency(pt, 5.0) == 20
     @test Pulses.frequency(pt, 7.5) == 20
-    @test Pulses.amplitude(pt, 0)   == 1
+    @test Pulses.amplitude(pt, 0)   == 0
     @test Pulses.amplitude(pt, 2.5) == 2
     @test Pulses.amplitude(pt, 5.0) == 2
     @test Pulses.amplitude(pt, 7.5) == 3
