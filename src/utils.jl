@@ -2,7 +2,7 @@
 module Utils
 export a_matrix, on
 
-using LinearAlgebra
+import LinearAlgebra: kron, I
 
 
 """
@@ -39,5 +39,74 @@ function on(op::AbstractMatrix{<:Number}, q::Integer, n::Integer)
     end
     return A
 end
+
+"""
+    kron_concat(ops::AbstractVector{<:AbstractMatrix{<:Number}})
+
+Concatenate a sequence of operators with the Kronecker product.
+
+"""
+function kron_concat(ops::AbstractVector{<:AbstractMatrix{<:Number}})
+    O = Matrix(I,1,1)
+    for q ∈ eachindex(ops)
+        O = kron(O, ops[q])
+    end
+    return O
+    #= TODO: Pre-allocate O, ...and each intermediate. :?
+        There *must* be an easy way to kron a sequence of matrices together...
+        Maybe reshaping O into a tensor..? Ironic...
+    =#
+end
+
+"""
+    kron_concat(ops::AbstractMatrix{<:Number}, n::Integer)
+
+Concatenate a repeated string of an operator with the Kronecker product.
+
+"""
+function kron_concat(op::AbstractMatrix{<:Number}, n::Integer)
+    O = Matrix(I,1,1)
+    for q ∈ 1:n
+        O = kron(O, op)
+    end
+    return O
+    #= TODO: Pre-allocate O, ...and each intermediate. :?
+        There *must* be an easy way to kron a sequence of matrices together...
+        Maybe reshaping O into a tensor..? Ironic...
+    =#
+end
+
+
+
+"""
+    algebra(
+        n::Integer,
+        m::Integer=2;
+        basis::Union{AbstractMatrix{<:Number},Nothing}=nothing,
+    )
+
+Construct a vector of annihilation operators acting on each of n m-level systems.
+
+Optionally, rotate these operators into the provided basis.
+
+These matrices, in conjunction with their adjoints,
+    form a complete algebra for the space of n m-level systems.
+
+"""
+function algebra(
+    n::Integer,
+    m::Integer=2;
+    basis::Union{AbstractMatrix{<:Number},Nothing}=nothing,
+)
+    a_ = a_matrix(m)                        # SINGLE-QUBIT ANNIHILATION OPERATOR
+    a = [on(a_, q, n) for q in 1:n]         # EACH OPERATOR, ACTING ON FULL HILBERT SPACE
+    if !(basis === nothing)
+        for q ∈ 1:n
+            a[q] .= basis' * a[q] * basis   # CONJUGATE WITH BASIS
+        end
+    end
+    return a
+end
+
 
 end
