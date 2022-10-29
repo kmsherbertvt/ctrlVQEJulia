@@ -1,7 +1,5 @@
 #= Provide matrix representations for common Hamiltonians. =#
 module Utils
-export a_matrix, on
-
 import LinearAlgebra: kron, I
 
 

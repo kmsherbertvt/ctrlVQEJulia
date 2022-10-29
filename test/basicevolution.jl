@@ -12,17 +12,17 @@ include("../src/evolve.jl")
 module UnitTesting
 using Test
 
-using  ..Utils
+import ..Utils
 import ..Pulses
 import ..Devices
 import ..Evolutions
 
 @testset "Utils" begin
-    @test a_matrix()  == [0 1; 0 0]
-    @test a_matrix(3) == [0 1 0; 0 0 √2; 0 0 0]
-    a = a_matrix()
-    @test on(a, 1, 2) == [0 0 1 0; 0 0 0 1; 0 0 0 0; 0 0 0 0]
-    @test on(a, 2, 2) == [0 1 0 0; 0 0 0 0; 0 0 0 1; 0 0 0 0]
+    @test Utils.a_matrix()  == [0 1; 0 0]
+    @test Utils.a_matrix(3) == [0 1 0; 0 0 √2; 0 0 0]
+    a = Utils.a_matrix()
+    @test Utils.on(a, 1, 2) == [0 0 1 0; 0 0 0 1; 0 0 0 0; 0 0 0 0]
+    @test Utils.on(a, 2, 2) == [0 1 0 0; 0 0 0 0; 0 0 0 1; 0 0 0 0]
 end
 
 @testset "Basic Square Pulse" begin

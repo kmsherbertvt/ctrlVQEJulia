@@ -3,7 +3,7 @@
 # include("./utils.jl")
 
 module Devices
-using ..Utils
+import ..Utils
 
 # AUXILIARY STRUCTURE TO FACILITATE REPRESENTATION OF QUBIT COUPLINGS
 struct QubitCouple
@@ -106,24 +106,24 @@ function static_hamiltonian(device::Transmon, nstates::Integer=2)
     n = length(device)
     N = nstates ^ n
 
-    a_ = a_matrix(nstates)
+    a_ = Utils.a_matrix(nstates)
     aT = a_'
 
     H = zeros(N,N)
 
     for q ∈ 1:n
-        a_q = on(a_,q,n)
-        aTq = on(aT,q,n)
+        a_q = Utils.on(a_,q,n)
+        aTq = Utils.on(aT,q,n)
         H += device.ω[q]   * (aTq * a_q)        # RESONANCE  TERMS
         H -= device.δ[q]/2 * (aTq^2 * a_q^2)    # ANHARMONIC TERMS
     end
 
     # COUPLING TERMS
     for (pair, g) ∈ device.gmap
-        a_1 = on(a_,pair.q1,n)
-        a_2 = on(a_,pair.q2,n)
-        aT1 = on(aT,pair.q1,n)
-        aT2 = on(aT,pair.q2,n)
+        a_1 = Utils.on(a_,pair.q1,n)
+        a_2 = Utils.on(a_,pair.q2,n)
+        aT1 = Utils.on(aT,pair.q1,n)
+        aT2 = Utils.on(aT,pair.q2,n)
 
         H += g * (aT1 * a_2 + aT2 * a_1)
     end
