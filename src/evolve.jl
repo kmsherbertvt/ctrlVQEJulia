@@ -44,6 +44,7 @@ Evolution Modes:
 # include("./device.jl")
 
 module Evolutions
+using DifferentialEquations
 using LinearAlgebra
 using TensorOperations
 import ..Utils
@@ -52,6 +53,7 @@ import ..Devices
 
 # ENUMERATIONS TO CONTROL EVOLUTION METHOD
 abstract type EvolutionMode end
+struct ODE     <: EvolutionMode end
 struct Direct  <: EvolutionMode end
 struct Lanczos <: EvolutionMode end
 struct Rotate  <: EvolutionMode end
@@ -115,14 +117,92 @@ function evolve(ψI, args...; kwargs...)
 end
 
 
-# TODO: "ode" evolution, which numerically integrates Schrodinger's equation
-
-# TODO: Use the dressed basis scheme from ctrlq.
+# TODO: include phase factor from commutator in Prediag mode
 
 # TODO: Treat first and last time-steps differently, using trapezoidal rule.
 
+# TODO: Use the dressed basis scheme from ctrlq.
 # TODO: move keyword calculations to `if nothing` lines.
 
+
+
+
+function evolve!(
+    ψ::AbstractVector{<:Number},
+    pulses::AbstractVector{<:Pulses.PulseTemplate},
+    device::Devices.Device,
+    ::Type{ODE};
+
+    # INFERRED VALUES (relatively fast, but you can pass them in if you'd like)
+    N = length(ψ),                      # SIZE OF STATEVECTOR
+    n = length(device),                 # NUMBER OF QUBITS
+    m = round(Int, N^(1/n)),            # NUMBER OF LEVELS ON EACH QUBIT
+    T = length(pulses[1]),              # TOTAL DURATION OF EVOLUTION
+
+    # CALCULATED VALUES (pre-calculate these and pass them in to speed up optimizations)
+    #= The only values required for evolution are: `ΛD`, `UD`, `a_`.
+        All others are used only to calculate those.
+        Therefore, if you are providing the required values,
+            you may set the others to `nothing`.
+        Do *NOT* just omit them, though, since doing so invokes expensive calculations.
+    =#
+    HD= Devices.static_hamiltonian(device, m),  # DEVICE HAMILTONIAN
+    ΛU= eigen(HD),                      # `Eigen` STRUCTURE
+    ΛD= ΛU.values,                      # DEVICE HAMILTONIAN EIGENVALUES
+    UD= ΛU.vectors,                     # DEVICE HAMILTONIAN EIGENVECTORS
+    a_= Utils.algebra(n, m, basis=UD),  # LIST OF ROTATED ANNIHILATION OPERATORS
+)
+    #= NOTE: Personally I feel like we'll want to start in qubit basis someday.
+        If that day comes, here is the code...
+
+    # ROTATE INTO DEVICE BASIS
+    ψ .= UD' * ψ
+                                                =#
+
+    # DEFINE THE INTERACTION-PICTURE HAMILTONIAN FOR A GIVEN TIME
+    function interaction!(du, u, p, t)
+        # CONSTRUCT CONTROL HAMILTONIAN (IN DEVICE BASIS)
+        HC = zeros(N,N)
+        for q ∈ 1:n
+            Ω = Pulses.amplitude(pulses[q], t)
+            ν = Pulses.frequency(pulses[q], t)
+            z = Ω * exp(im*ν*t)
+            HC += z*a_[q] + z'*a_[q]'
+        end
+
+        # CONJUGATE WITH ACTION OF (DIAGONALIZED) DEVICE HAMILTONIAN
+        expD = Diagonal(exp.((im*t) * ΛD))  # DEVICE ACTION
+        HIC = expD * HC * expD'     # INTERACTION-PICTURE CONTROL HAMILTONIAN
+
+        # TODO: pre-allocate HC, expD, and HIC into p, perhaps?
+
+        du .= -im * HIC * u
+    end
+
+    # SOLVE THE SYSTEM OF DIFFERENTIAL EQUATIONS
+    #= NOTE:
+        This method autoselects an algorithm based on I have no idea what,
+            meaning I have no idea what the time complexity or accuracy are likely to be,
+            or how I should expect them to scale with increasing system size.
+        But, it works *pretty* well for the single-qubit case,
+            so I'm willing to treat it as a sort of black-box standard.
+    =#
+    schrodinger = ODEProblem(interaction!, ψ, (0.0, T))
+    solution = solve(schrodinger, save_everystep=false)
+
+    # WRITE FINAL SOLUTION TO THE GIVEN STATEVECTOR
+    ψ .= solution.u[end]
+
+    # RE-NORMALIZE THIS STATE
+    ψ .= ψ / √abs(ψ'*ψ)
+
+    #= NOTE: Personally I feel like we'll want to start in qubit basis someday.
+        If that day comes, here is the code...
+
+    # ROTATE *OUT* OF DEVICE BASIS
+    ψ .= UD * ψ
+                                                =#
+end
 
 
 function evolve!(

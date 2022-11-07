@@ -83,6 +83,10 @@ fidelity(ψ,φ) = 1 - abs2(ψ'*φ)
 ψD = Evolutions.evolve(ψI, pulses, device, Evolutions.Direct; numsteps=numsteps)
 println("1-|⟨ψD|ψI⟩|²: $(fidelity(ψD, ψI))")        # CHECK HOW FAR WE EVOLVED FROM ψI
 
+# NUMERICAL INTEGRATION
+ψS = Evolutions.evolve(ψI, pulses, device, Evolutions.ODE; numsteps=numsteps)
+println("1-|⟨ψD|ψS⟩|²: $(fidelity(ψD, ψS))")
+
 # ROTATE BETWEEN STATIC AND DRIVE BASES
 ψRk = Evolutions.evolve(
     ψI, pulses, device, Evolutions.Rotate; numsteps=numsteps,
