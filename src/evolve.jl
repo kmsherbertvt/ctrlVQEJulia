@@ -116,14 +116,8 @@ function evolve(ψI, args...; kwargs...)
     return ψ
 end
 
-
-# TODO: Treat first and last time-steps differently, using trapezoidal rule.
-
 # TODO: Use the dressed basis scheme from ctrlq.
 # TODO: move keyword calculations to `if nothing` lines.
-
-
-
 
 function evolve!(
     ψ::AbstractVector{<:Number},
@@ -241,26 +235,18 @@ function evolve!(
     ψ .= UD' * ψ
                                                 =#
 
-    for i ∈ 1:numsteps
-        # CONSTRUCT CONTROL HAMILTONIAN (IN DEVICE BASIS)
-        HC = zeros(N,N)
-        for q ∈ 1:n
-            Ω = Pulses.amplitude(pulses[q], t_[i])
-            ν = Pulses.frequency(pulses[q], t_[i])
-            z = Ω * exp(im*ν*t_[i])
-            HC += z*a_[q] + z'*a_[q]'
-        end
+    # FIRST TIME STEP   (use Δt/2 for first and last time step)
+    ψ .= exp( (-im*Δt/2) * _interactionhamiltonian(pulses, ΛD, t_[1], a_, N, n)) * ψ
+    # TODO: Lanczos is a carbon copy of this method, except this line.
 
-        # CONJUGATE WITH ACTION OF (DIAGONALIZED) DEVICE HAMILTONIAN
-        expD = Diagonal(exp.((im*t_[i]) * ΛD))  # DEVICE ACTION
-        HIC = expD * HC * expD'     # INTERACTION-PICTURE CONTROL HAMILTONIAN
-
-        # TODO: pre-allocate HC, expD, and HIC
-
-        # APPLY ACTION OF THE INTERACTION-PICTURE CONTROL HAMILTONIAN
-        ψ .= exp( (-im*Δt) * HIC) * ψ
-            # TODO: Lanczos is a carbon copy of this method, except this one line.
+    for i ∈ 2:numsteps-1
+        ψ .= exp( (-im*Δt) * _interactionhamiltonian(pulses, ΛD, t_[i], a_, N, n)) * ψ
+        # TODO: Lanczos is a carbon copy of this method, except this one line.
     end
+
+    # LAST TIME STEP    (use Δt/2 for first and last time step)
+    ψ .= exp( (-im*Δt/2) * _interactionhamiltonian(pulses, ΛD, t_[end], a_, N, n)) * ψ
+    # TODO: Lanczos is a carbon copy of this method, except this line.
 
     #= NOTE: Personally I feel like we'll want to start in qubit basis someday.
         If that day comes, here is the code...
@@ -271,6 +257,28 @@ function evolve!(
 
     ######################################################################################
 end
+
+function _interactionhamiltonian(pulses, ΛD, t, a_, N, n)
+    # CONSTRUCT CONTROL HAMILTONIAN (IN DEVICE BASIS)
+    HC = zeros(N,N)
+    for q ∈ 1:n
+        Ω = Pulses.amplitude(pulses[q], t)
+        ν = Pulses.frequency(pulses[q], t)
+        z = Ω * exp(im*ν*t)
+        HC += z*a_[q] + z'*a_[q]'
+    end
+
+    # CONJUGATE WITH ACTION OF (DIAGONALIZED) DEVICE HAMILTONIAN
+    expD = Diagonal(exp.((im*t) * ΛD))  # DEVICE ACTION
+    HIC = expD * HC * expD'     # INTERACTION-PICTURE CONTROL HAMILTONIAN
+
+    # TODO: Standardize arguments
+    # TODO: Document
+    # TODO: pre-allocate HC and expD.
+end
+
+
+
 
 
 function evolve!(
@@ -317,11 +325,11 @@ function evolve!(
     #= NOTE: Personally I feel like we'll want to start in qubit basis someday.
         If that day comes, delete this first rotation... =#
 
-    # APPLY FIRST PULSE DRIVES  (treated separately to give `V` proper "join" behavior)
-    _preparequbitdrives!(pulses, m, t_[1], Δt; n=n, a=a, O_=O_)
+    # APPLY FIRST PULSE DRIVES  (use Δt/2 for first and last time step)
+    _preparequbitdrives!(pulses, m, t_[1], Δt/2; n=n, a=a, O_=O_)
     _applyqubitoperators!(ψ, O_, qubitapplymode; N=N, n=n, m=m)
 
-    for i ∈ 2:numsteps
+    for i ∈ 2:numsteps-1
         # CONNECT EACH TIME STEP WITH THE DEVICE ACTION
         ψ .= V * ψ
 
@@ -329,6 +337,11 @@ function evolve!(
         _preparequbitdrives!(pulses, m, t_[i], Δt; n=n, a=a, O_=O_)
         _applyqubitoperators!(ψ, O_, qubitapplymode; N=N, n=n, m=m)
     end
+
+    # APPLY LAST PULSE DRIVES   (use Δt/2 for first and last time step)
+    ψ .= V * ψ
+    _preparequbitdrives!(pulses, m, t_[end], Δt/2; n=n, a=a, O_=O_)
+    _applyqubitoperators!(ψ, O_, qubitapplymode; N=N, n=n, m=m)
 
     # LAST STEP: exp(𝒊 HD t[numsteps])), ie. exp(-𝒊 HD T)
     ψ .= UD' * ψ                        # ROTATE INTO DEVICE BASIS
@@ -533,13 +546,13 @@ function evolve!(
     # ROTATE INTO `in_basis`
     ψ .= in_basis' * ψ
 
-    # APPLY FIRST PULSE DRIVES  (treated separately to give `V` proper "join" behavior)
-    _preparequbitdrives_productformula(pulses, m, t_[1], Δt; suzukiorder=suzukiorder,
+    # APPLY FIRST PULSE DRIVES  (use Δt/2 for first and last time step)
+    _preparequbitdrives_productformula(pulses, m, t_[1], Δt/2; suzukiorder=suzukiorder,
         Λ=Λ, UQP=UQP, UPQ=UPQ, n=n, O_=O_
     )
     _applyqubitoperators!(ψ, O_, qubitapplymode; N=N, n=n, m=m)
 
-    for i ∈ 2:numsteps
+    for i ∈ 2:numsteps-1
         # CONNECT EACH TIME STEP WITH THE DEVICE ACTION
         ψ .= L * ψ
 
@@ -549,6 +562,13 @@ function evolve!(
         )
         _applyqubitoperators!(ψ, O_, qubitapplymode; N=N, n=n, m=m)
     end
+
+    # APPLY LAST PULSE DRIVES   (use Δt/2 for first and last time step)
+    ψ .= L * ψ
+    _preparequbitdrives_productformula(pulses, m, t_[end], Δt/2; suzukiorder=suzukiorder,
+        Λ=Λ, UQP=UQP, UPQ=UPQ, n=n, O_=O_
+    )
+    _applyqubitoperators!(ψ, O_, qubitapplymode; N=N, n=n, m=m)
 
     # ROTATE *OUT* OF `outbasis`
     ψ .= outbasis * ψ

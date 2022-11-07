@@ -88,6 +88,7 @@ end
 ##########################################################################################
 #                       PERFORM THE ACTUAL EVOLUTIONS - QUBIT CASE
 
+println()
 println("Qubit Validation:")
 println()
 
@@ -131,6 +132,7 @@ report(ψ2, ψA2, "PREDIAGONALIZED (order 2)")
 ##########################################################################################
 #                       PERFORM THE ACTUAL EVOLUTIONS - QUBIT CASE
 
+println()
 println("Qutrit Validation:")
 println()
 
