@@ -100,46 +100,33 @@ report(ψD, ψA2, "DIRECT EXPONENTIATION")
 report(ψS, ψA2, "NUMERICAL INTEGRATION")
 
 # ROTATE BETWEEN STATIC AND DRIVE BASES
-ψRk = Evolutions.evolve(
+ψR = Evolutions.evolve(
     ψI2, pulses, device, Evolutions.Rotate; numsteps=numsteps,
     qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
 )
-report(ψRk, ψA2, "ROTATION (kronecker product)")
-
-ψRt = Evolutions.evolve(
-    ψI2, pulses, device, Evolutions.Rotate; numsteps=numsteps,
-    qubitapplymode=Evolutions.Tensor(), # APPLY QUBIT ROTATIONS WITH TENSOR ALGEBRA
-)
-report(ψRt, ψA2, "ROTATION (tensor")
+report(ψR, ψA2, "ROTATION")
 
 # FACTOR DRIVE BASIS SO ALL ROTATIONS ARE TIME-INDEPENDENT
-ψ1k = Evolutions.evolve(
+ψ0 = Evolutions.evolve(
+    ψI2, pulses, device, Evolutions.Prediag; numsteps=numsteps,
+    suzukiorder=0,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
+    qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
+)
+report(ψ0, ψA2, "PREDIAGONALIZED (order 0 - okay actually order 1 but including commutator factor)")
+
+ψ1 = Evolutions.evolve(
     ψI2, pulses, device, Evolutions.Prediag; numsteps=numsteps,
     suzukiorder=1,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
     qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
 )
-report(ψ1k, ψA2, "PREDIAGONALIZED (order 1, kronecker product)")
+report(ψ1, ψA2, "PREDIAGONALIZED (order 1)")
 
-ψ1t = Evolutions.evolve(
-    ψI2, pulses, device, Evolutions.Prediag; numsteps=numsteps,
-    suzukiorder=1,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
-    qubitapplymode=Evolutions.Tensor(), # APPLY QUBIT ROTATIONS WITH TENSOR ALGEBRA
-)
-report(ψ1t, ψA2, "PREDIAGONALIZED (order 1, tensor)")
-
-ψ2k = Evolutions.evolve(
+ψ2 = Evolutions.evolve(
     ψI2, pulses, device, Evolutions.Prediag; numsteps=numsteps,
     suzukiorder=2,                      # FACTOR WITH SYMMETRIC PRODUCT FORMULA
     qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
 )
-report(ψ2k, ψA2, "PREDIAGONALIZED (order 2, kronecker product)")
-
-ψ2t = Evolutions.evolve(
-    ψI2, pulses, device, Evolutions.Prediag; numsteps=numsteps,
-    suzukiorder=2,                      # FACTOR WITH SYMMETRIC PRODUCT FORMULA
-    qubitapplymode=Evolutions.Tensor(), # APPLY QUBIT ROTATIONS WITH TENSOR ALGEBRA
-)
-report(ψ2t, ψA2, "PREDIAGONALIZED (order 2, tensor)")
+report(ψ2, ψA2, "PREDIAGONALIZED (order 2)")
 
 ##########################################################################################
 #                       PERFORM THE ACTUAL EVOLUTIONS - QUBIT CASE
@@ -156,43 +143,30 @@ report(ψD, ψA3, "DIRECT EXPONENTIATION")
 report(ψS, ψA3, "NUMERICAL INTEGRATION")
 
 # ROTATE BETWEEN STATIC AND DRIVE BASES
-ψRk = Evolutions.evolve(
+ψR = Evolutions.evolve(
     ψI3, pulses, device, Evolutions.Rotate; numsteps=numsteps,
     qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
 )
-report(ψRk, ψA3, "ROTATION (kronecker product)")
-
-ψRt = Evolutions.evolve(
-    ψI3, pulses, device, Evolutions.Rotate; numsteps=numsteps,
-    qubitapplymode=Evolutions.Tensor(), # APPLY QUBIT ROTATIONS WITH TENSOR ALGEBRA
-)
-report(ψRt, ψA3, "ROTATION (tensor")
+report(ψR, ψA3, "ROTATION")
 
 # FACTOR DRIVE BASIS SO ALL ROTATIONS ARE TIME-INDEPENDENT
-ψ1k = Evolutions.evolve(
+ψ0 = Evolutions.evolve(
+    ψI3, pulses, device, Evolutions.Prediag; numsteps=numsteps,
+    suzukiorder=0,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
+    qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
+)
+report(ψ0, ψA3, "PREDIAGONALIZED (order 0 - okay actually order 1 but including commutator factor)")
+
+ψ1 = Evolutions.evolve(
     ψI3, pulses, device, Evolutions.Prediag; numsteps=numsteps,
     suzukiorder=1,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
     qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
 )
-report(ψ1k, ψA3, "PREDIAGONALIZED (order 1, kronecker product)")
+report(ψ1, ψA3, "PREDIAGONALIZED (order 1)")
 
-ψ1t = Evolutions.evolve(
-    ψI3, pulses, device, Evolutions.Prediag; numsteps=numsteps,
-    suzukiorder=1,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
-    qubitapplymode=Evolutions.Tensor(), # APPLY QUBIT ROTATIONS WITH TENSOR ALGEBRA
-)
-report(ψ1t, ψA3, "PREDIAGONALIZED (order 1, tensor)")
-
-ψ2k = Evolutions.evolve(
+ψ2 = Evolutions.evolve(
     ψI3, pulses, device, Evolutions.Prediag; numsteps=numsteps,
     suzukiorder=2,                      # FACTOR WITH SYMMETRIC PRODUCT FORMULA
     qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
 )
-report(ψ2k, ψA3, "PREDIAGONALIZED (order 2, kronecker product)")
-
-ψ2t = Evolutions.evolve(
-    ψI3, pulses, device, Evolutions.Prediag; numsteps=numsteps,
-    suzukiorder=2,                      # FACTOR WITH SYMMETRIC PRODUCT FORMULA
-    qubitapplymode=Evolutions.Tensor(), # APPLY QUBIT ROTATIONS WITH TENSOR ALGEBRA
-)
-report(ψ2t, ψA3, "PREDIAGONALIZED (order 2, tensor)")
+report(ψ2, ψA3, "PREDIAGONALIZED (order 2)")

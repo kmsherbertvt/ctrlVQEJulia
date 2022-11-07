@@ -117,8 +117,6 @@ function evolve(ψI, args...; kwargs...)
 end
 
 
-# TODO: include phase factor from commutator in Prediag mode
-
 # TODO: Treat first and last time-steps differently, using trapezoidal rule.
 
 # TODO: Use the dressed basis scheme from ctrlq.
@@ -514,7 +512,7 @@ function evolve!(
     UQP = UQ' * UP,                     # ROTATION MATRIX FROM P -> Q BASIS
     UPQ = UP' * UQ,                     # ROTATION MATRIX FROM Q -> P BASIS
 
-    in_basis = Utils.kron_concat(suzukiorder==1 ? UP : UQ, n),  # STARTING BASIS FOR DRIVE
+    in_basis = Utils.kron_concat(suzukiorder==2 ? UQ : UP, n),  # STARTING BASIS FOR DRIVE
     outbasis = Utils.kron_concat(UQ, n),                        #   ENDING BASIS FOR DRIVE
     L = in_basis' * V * outbasis,       # LIGAND OPERATION
 
@@ -590,14 +588,19 @@ end
 
 Prepare a vector of qubit operations representing the instantaneous action of a pulse.
 
-Say a pulse has amplitude Ω and frequency ν, and define z = Ω exp(𝒊 ν t)
+Say a pulse has amplitude Ω and frequency ν, and define z = Ω exp(𝒊·ν·t)
     We may model the action of the pulse on a resonant system at time t
-        with a "Control" Hamiltonian H = z a + z' a',
-        and the evolution over short time Δt as exp(-𝒊 Δt H).
+        with a "Control" Hamiltonian H = z·a + z'·a',
+        and the evolution over short time Δt as exp(-𝒊·Δt·H).
 
-This variant rewrites the drive Hamiltonian (H = z a + z' a') => x Q + y P,
-    to rewrite the evolution operator exp(-𝒊 Δt H) ≈ exp(-𝒊 Δt x Q) exp(-𝒊 Δt x P)
-        or a related product formula, selected with `suzukitrotter`.
+This variant rewrites the drive Hamiltonian (H = z·a + z'·a') => x·Q + y·P,
+    to rewrite the evolution operator exp(-𝒊·Δt·H) ≈ exp(-𝒊·Δt·x·Q) exp(-𝒊·Δt·x·P)
+        or a related product formula, selected with `suzukiorder`.
+
+As an EXTRA feature, `suzukiorder=0` will do a first-order product formula,
+    but include the commutator exp(Δt²·x·y·[Q,P]/2), where [Q,P]=-2𝒊.
+    In the limit where m→∞, this is exact.
+But, uh, we're not in that limit, so...it's just for fun... ^_^
 
 """
 function _preparequbitdrives_productformula(
@@ -639,18 +642,24 @@ function _preparequbitdrives_productformula(
         x, y = real(z), imag(z)
 
         # EVOLVE QUBIT IN TIME, AND EXTEND FULL-QUBIT OPERATOR
-        if     suzukiorder == 1
-            expQ = Diagonal(exp.((-im*Δt*real(z)) * Λ))
-            expP = Diagonal(exp.((-im*Δt*imag(z)) * Λ))
+        if     suzukiorder == 0
+            expQ = Diagonal(exp.((-im*Δt*x) * Λ))
+            expP = Diagonal(exp.((-im*Δt*y) * Λ))
+
+            O_[q] .= expQ * UQP * expP * exp(-im*x*y*Δt^2)
+                # Alas, this is only going to work for large m.
+        elseif suzukiorder == 1
+            expQ = Diagonal(exp.((-im*Δt*x) * Λ))
+            expP = Diagonal(exp.((-im*Δt*y) * Λ))
 
             O_[q] .= expQ * UQP * expP
         elseif suzukiorder == 2
-            expQ = Diagonal(exp.((-im*Δt*real(z)/2) * Λ))
-            expP = Diagonal(exp.((-im*Δt*imag(z)  ) * Λ))
+            expQ = Diagonal(exp.((-im*Δt*x/2) * Λ))
+            expP = Diagonal(exp.((-im*Δt*y  ) * Λ))
 
             O_[q] .= expQ * UQP * expP * UPQ * expQ
         else
-            error("Only `suzukiorder`s 1 and 2 are supported.")
+            error("Only `suzukiorder`s 0, 1, and 2 are supported.")
         end
     end
 

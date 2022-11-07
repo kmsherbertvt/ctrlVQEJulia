@@ -84,7 +84,7 @@ fidelity(ψ,φ) = 1 - abs2(ψ'*φ)
 println("1-|⟨ψD|ψI⟩|²: $(fidelity(ψD, ψI))")        # CHECK HOW FAR WE EVOLVED FROM ψI
 
 # NUMERICAL INTEGRATION
-ψS = Evolutions.evolve(ψI, pulses, device, Evolutions.ODE; numsteps=numsteps)
+ψS = Evolutions.evolve(ψI, pulses, device, Evolutions.ODE)
 println("1-|⟨ψD|ψS⟩|²: $(fidelity(ψD, ψS))")
 
 # ROTATE BETWEEN STATIC AND DRIVE BASES
@@ -101,6 +101,20 @@ println("1-|⟨ψD|ψRk⟩|²: $(fidelity(ψD, ψRk))")
 println("1-|⟨ψD|ψRt⟩|²: $(fidelity(ψD, ψRt))")
 
 # FACTOR DRIVE BASIS SO ALL ROTATIONS ARE TIME-INDEPENDENT
+ψ0k = Evolutions.evolve(
+    ψI, pulses, device, Evolutions.Prediag; numsteps=numsteps,
+    suzukiorder=0,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
+    qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
+)
+println("1-|⟨ψD|ψ0k⟩|²: $(fidelity(ψD, ψ0k))")
+
+ψ0t = Evolutions.evolve(
+    ψI, pulses, device, Evolutions.Prediag; numsteps=numsteps,
+    suzukiorder=0,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
+    qubitapplymode=Evolutions.Tensor(), # APPLY QUBIT ROTATIONS WITH TENSOR ALGEBRA
+)
+println("1-|⟨ψD|ψ0t⟩|²: $(fidelity(ψD, ψ0t))")
+
 ψ1k = Evolutions.evolve(
     ψI, pulses, device, Evolutions.Prediag; numsteps=numsteps,
     suzukiorder=1,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
