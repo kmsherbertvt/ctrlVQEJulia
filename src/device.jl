@@ -79,17 +79,18 @@ struct Transmon <: Device
     function Transmon(
         ω::AbstractVector{<:Number},
         δ::AbstractVector{<:Number},
-        gmap::AbstractDict{QubitCouple,<:Number},
+        gmap::AbstractDict{QubitCouple,<:Number}=Dict{QubitCouple,Number}(),
         n::Integer=length(ω),
     )
+        # TRUNCATE OFF UNUSED QUBITS FROM FREQUENCY/ANHARMONICITY LISTS
         ω = ω[1:n]
         δ = δ[1:n]
-        gmap = Dict(pair=>g for (pair, g) ∈ gmap if 1 <= pair.q1 <= pair.q2 <= n)
+        # FILTER OUT UNUSED QUBITS FROM THE PROVIDING COUPLINGS
+        gmap = filter( pair_g -> 1 <= pair_g[1].q1 <= pair_g[1].q2 <= n, gmap)
+            # The `filter` closure takes key=>value pairs. `pair_g[1]` is just the key.
         return new(n, ω, δ, gmap)
     end
 end
-# TODO: Mayhaps the inner constructor should be strictly four arguments,
-#       and we make an outer constructor that infers n?
 
 """
     static_hamiltonian(device::Transmon, nstates::Integer)
