@@ -74,61 +74,52 @@ device = Devices.Transmon(
 )
 
 
-
-
 ##########################################################################################
 #                           PERFORM THE ACTUAL EVOLUTIONS
 
 fidelity(ψ,φ) = 1 - abs2(ψ'*φ)
 
 # DIRECT EXPONENTIATION (Checked against ctrlq, this is the "standard".)
-ψD = copy(ψI)
-Evolutions.evolve!(ψD, pulses, device, Evolutions.Direct; numsteps=numsteps)
+ψD = Evolutions.evolve(ψI, pulses, device, Evolutions.Direct; numsteps=numsteps)
 println("1-|⟨ψD|ψI⟩|²: $(fidelity(ψD, ψI))")        # CHECK HOW FAR WE EVOLVED FROM ψI
 
 # ROTATE BETWEEN STATIC AND DRIVE BASES
-ψRk = copy(ψI)
-ψRk = Evolutions.evolve!(
-    ψRk, pulses, device, Evolutions.Rotate; numsteps=numsteps,
+ψRk = Evolutions.evolve(
+    ψI, pulses, device, Evolutions.Rotate; numsteps=numsteps,
     qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
 )
 println("1-|⟨ψD|ψRk⟩|²: $(fidelity(ψD, ψRk))")
 
-ψRt = copy(ψI)
-ψRt = Evolutions.evolve!(
-    ψRt, pulses, device, Evolutions.Rotate; numsteps=numsteps,
+ψRt = Evolutions.evolve(
+    ψI, pulses, device, Evolutions.Rotate; numsteps=numsteps,
     qubitapplymode=Evolutions.Tensor(), # APPLY QUBIT ROTATIONS WITH TENSOR ALGEBRA
 )
 println("1-|⟨ψD|ψRt⟩|²: $(fidelity(ψD, ψRt))")
 
 # FACTOR DRIVE BASIS SO ALL ROTATIONS ARE TIME-INDEPENDENT
-ψ1k = copy(ψI)
-ψ1k = Evolutions.evolve!(
-    ψ1k, pulses, device, Evolutions.Prediag; numsteps=numsteps,
+ψ1k = Evolutions.evolve(
+    ψI, pulses, device, Evolutions.Prediag; numsteps=numsteps,
     suzukiorder=1,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
     qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
 )
 println("1-|⟨ψD|ψ1k⟩|²: $(fidelity(ψD, ψ1k))")
 
-ψ1t = copy(ψI)
-ψ1t = Evolutions.evolve!(
-    ψ1t, pulses, device, Evolutions.Prediag; numsteps=numsteps,
+ψ1t = Evolutions.evolve(
+    ψI, pulses, device, Evolutions.Prediag; numsteps=numsteps,
     suzukiorder=1,                      # FACTOR WITH SIMPLEST POSSIBLE PRODUCT FORMULA
     qubitapplymode=Evolutions.Tensor(), # APPLY QUBIT ROTATIONS WITH TENSOR ALGEBRA
 )
 println("1-|⟨ψD|ψ1t⟩|²: $(fidelity(ψD, ψ1t))")
 
-ψ2k = copy(ψI)
-ψ2k = Evolutions.evolve!(
-    ψ2k, pulses, device, Evolutions.Prediag; numsteps=numsteps,
+ψ2k = Evolutions.evolve(
+    ψI, pulses, device, Evolutions.Prediag; numsteps=numsteps,
     suzukiorder=2,                      # FACTOR WITH SYMMETRIC PRODUCT FORMULA
     qubitapplymode=Evolutions.Kronec(), # APPLY QUBIT ROTATIONS WITH KRONECKER PRODUCT
 )
 println("1-|⟨ψD|ψ2k⟩|²: $(fidelity(ψD, ψ2k))")
 
-ψ2t = copy(ψI)
-ψ2t = Evolutions.evolve!(
-    ψ2t, pulses, device, Evolutions.Prediag; numsteps=numsteps,
+ψ2t = Evolutions.evolve(
+    ψI, pulses, device, Evolutions.Prediag; numsteps=numsteps,
     suzukiorder=2,                      # FACTOR WITH SYMMETRIC PRODUCT FORMULA
     qubitapplymode=Evolutions.Tensor(), # APPLY QUBIT ROTATIONS WITH TENSOR ALGEBRA
 )

@@ -63,7 +63,7 @@ struct Kronec <: QubitApplyMode end
 struct Tensor <: QubitApplyMode end
 
 """
-    evolve(
+    evolve!(
         ψ::AbstractVector{<:Number},
         pulses::AbstractVector{<:Pulses.PulseTemplate},
         device::Devices.Device;
@@ -99,6 +99,29 @@ evolve!(
 ) = evolve!(ψ, pulses, device, Direct; numsteps=numsteps)
 
 
+
+"""
+    evolve(ψI, args...; kwargs...)
+
+Shorthand for a not-in-place function to evolve a state `ψI` in time.
+
+This just copies ψI to a new variable then calls `evolve!`, so find documentation there!
+
+"""
+function evolve(ψI, args...; kwargs...)
+    ψ = copy(ψI)
+    evolve!(ψ, args...; kwargs...)
+    return ψ
+end
+
+
+# TODO: "ode" evolution, which numerically integrates Schrodinger's equation
+
+# TODO: Use the dressed basis scheme from ctrlq.
+
+# TODO: Treat first and last time-steps differently, using trapezoidal rule.
+
+# TODO: move keyword calculations to `if nothing` lines.
 
 
 
