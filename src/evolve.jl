@@ -116,7 +116,6 @@ function evolve(ψI, args...; kwargs...)
     return ψ
 end
 
-# TODO: Use the dressed basis scheme from ctrlq.
 # TODO: move keyword calculations to `if nothing` lines.
 
 function evolve!(
@@ -139,7 +138,7 @@ function evolve!(
         Do *NOT* just omit them, though, since doing so invokes expensive calculations.
     =#
     HD= Devices.static_hamiltonian(device, m),  # DEVICE HAMILTONIAN
-    ΛU= eigen(HD),                      # `Eigen` STRUCTURE
+    ΛU= Utils.dressedbasis(HD),         # `Eigen` STRUCTURE
     ΛD= ΛU.values,                      # DEVICE HAMILTONIAN EIGENVALUES
     UD= ΛU.vectors,                     # DEVICE HAMILTONIAN EIGENVECTORS
     a_= Utils.algebra(n, m, basis=UD),  # LIST OF ROTATED ANNIHILATION OPERATORS
@@ -220,7 +219,7 @@ function evolve!(
         Do *NOT* just omit them, though, since doing so invokes expensive calculations.
     =#
     HD= Devices.static_hamiltonian(device, m),  # DEVICE HAMILTONIAN
-    ΛU= eigen(HD),                      # `Eigen` STRUCTURE
+    ΛU= Utils.dressedbasis(HD),         # `Eigen` STRUCTURE
     ΛD= ΛU.values,                      # DEVICE HAMILTONIAN EIGENVALUES
     UD= ΛU.vectors,                     # DEVICE HAMILTONIAN EIGENVECTORS
     a_= Utils.algebra(n, m, basis=UD),  # LIST OF ROTATED ANNIHILATION OPERATORS
@@ -305,7 +304,7 @@ function evolve!(
         Do *NOT* just omit them, though, since doing so invokes expensive calculations.
     =#
     HD= Devices.static_hamiltonian(device, m),  # DEVICE HAMILTONIAN
-    ΛU= eigen(HD),                      # `Eigen` STRUCTURE
+    ΛU= Utils.dressedbasis(HD),         # `Eigen` STRUCTURE
     ΛD= ΛU.values,                      # DEVICE HAMILTONIAN EIGENVALUES
     UD= ΛU.vectors,                     # DEVICE HAMILTONIAN EIGENVECTORS
     V = UD * Diagonal(exp.((-im*Δt) * ΛD)) * UD',   # REPEATED DEVICE ACTION
@@ -509,7 +508,7 @@ function evolve!(
         Do *NOT* just omit them, though, since doing so invokes expensive calculations.
     =#
     HD= Devices.static_hamiltonian(device, m),  # DEVICE HAMILTONIAN
-    ΛU= eigen(HD),                      # `Eigen` STRUCTURE
+    ΛU= Utils.dressedbasis(HD),         # `Eigen` STRUCTURE
     ΛD= ΛU.values,                      # DEVICE HAMILTONIAN EIGENVALUES
     UD= ΛU.vectors,                     # DEVICE HAMILTONIAN EIGENVECTORS
     V = UD * Diagonal(exp.((-im*Δt) * ΛD)) * UD',   # REPEATED DEVICE ACTION
