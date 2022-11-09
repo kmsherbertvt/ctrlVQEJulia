@@ -32,7 +32,7 @@ end
     @test Pulses.frequency(pt, 2.5) == 20
     @test Pulses.frequency(pt, 5.0) == 20
     @test Pulses.frequency(pt, 7.5) == 20
-    @test Pulses.amplitude(pt, 0)   == 0
+    @test Pulses.amplitude(pt, 0)   == 1
     @test Pulses.amplitude(pt, 2.5) == 2
     @test Pulses.amplitude(pt, 5.0) == 2
     @test Pulses.amplitude(pt, 7.5) == 3
@@ -47,6 +47,6 @@ end
     # Technically we're never testing δ terms, but I'm not inclined to enter a 9x9 matrix...
 end
 
-# TODO: Port evolvetest.jl into a concise(?) test script here.
+# TODO: Port analyticaltest.jl into a concise(?) test script here.
 
 end
