@@ -62,7 +62,7 @@ After it has installed, `<backspace>` gets you back to the regular REPL mode. Ty
 
 Now generate documentation via:
 ```
-> julia make.jl
+> julia docs/make.jl
 ```
 
 You can view documentation by opening the newly-created file `docs/build/index.html`.
