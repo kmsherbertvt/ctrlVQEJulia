@@ -1,8 +1,9 @@
 #= Stock solutions for simple systems. =#
 
 module Analytical
-using Polynomials
-using SpecialMatrices
+
+import Polynomials: Polynomial, roots
+import SpecialMatrices: Vandermonde
 
 function onequbitsquarepulse(
     ψI,             # INITIAL WAVE FUNCTION
@@ -101,4 +102,4 @@ function _solve_diffeq(a, b)
 end
 
 
-end
+end # END MODULE

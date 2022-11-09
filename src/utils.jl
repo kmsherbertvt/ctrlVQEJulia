@@ -1,19 +1,21 @@
 #= Provide matrix representations for common Hamiltonians. =#
+
 module Utils
-import LinearAlgebra: kron, I, eigen, Eigen
+
+import LinearAlgebra: kron, I, eigen, Eigen, Hermitian
 
 
 """
-    a_matrix(nstates::Integer=2)
+    a_matrix(m::Integer=2)
 
 Matrix representation of the bosonic annihilation operator on a single qubit.
 
-Note that the matrix representation must be truncated to `nstates` levels.
+Note that the matrix representation must be truncated to `m` levels.
 
 """
-function a_matrix(nstates::Integer=2)
-    a = zeros((nstates,nstates))
-    for i ∈ 1:nstates-1
+function a_matrix(m::Integer=2)
+    a = zeros((m,m))
+    for i ∈ 1:m-1
         a[i,i+1] = √i               # BOSONIC ANNIHILATION OPERATOR
     end
     return a
@@ -81,12 +83,12 @@ end
         basis::Union{AbstractMatrix{<:Number},Nothing}=nothing,
     )
 
-Construct a vector of annihilation operators acting on each of n m-level systems.
+Construct a vector of annihilation operators acting on each of `n` `m`-level systems.
 
 Optionally, rotate these operators into the provided basis.
 
 These matrices, in conjunction with their adjoints,
-    form a complete algebra for the space of n m-level systems.
+    form a complete algebra for the space of `n` `m`-level systems.
 
 """
 function algebra(
@@ -106,26 +108,25 @@ end
 
 
 """
-    dressedbasis(H::AbstractMatrix{<:Number})
+    dressedbasis(H::Hermitian)
 
 Calculate the eigenvalues and eigenvectors for a Hermitian matrix `H`.
 
 This method returns an `Eigen` object, the same type as LinearAlgebra.eigen(H).
 
 Dressing does three things:
-    1. Re-order eigenpairs such that the ith eigenvector is the one with
-        the largest magnitude in the ith element.
-       (This is distinct from the LinearAlgebra.eigen order,
-            which uses ascending order of eigenvalues.)
-    2. Multiply each eigenvector by a global phase such that the ith element
-        is real and positive.
-    3. Zero out any elements with magnitude less than machine precision.
+1. Re-order eigenpairs such that the ith eigenvector is the one with
+    the largest magnitude in the ith element.
+    (This is distinct from the LinearAlgebra.eigen order,
+        which uses ascending order of eigenvalues.)
+2. Multiply each eigenvector by a global phase such that the ith element
+    is real and positive.
+3. Zero out any elements with magnitude less than machine precision.
 
 """
-function dressedbasis(H::AbstractMatrix{<:Number})
+function dressedbasis(H::Hermitian)
     N = size(H)[1]
     Λ, U = eigen(H)
-    #= TODO: I don't know if this is sophisticated enough to use Hermitian algorithm when H is Hermitian. We should do some testing to find out... =#
 
     # IMPOSE PERMUTATION
     σ = Vector{Int}(undef,N)
@@ -142,7 +143,8 @@ function dressedbasis(H::AbstractMatrix{<:Number})
 
     #= TODO: This strategy for selecting the permutation might not be the most efficient.
         It's not *bad*: should be no worse than O(N² log N).
-        But a less careful handling of ties would be only O(N²). I'm not sure. :?
+        But a less careful handling of ties would need only O(N²).
+        So I feel like there ought be a strategy that doesn't involve a full sort...
     =#
 
     # IMPOSE PHASE
@@ -156,8 +158,7 @@ function dressedbasis(H::AbstractMatrix{<:Number})
     U[abs.(U) .< eps(eltype(U))] .= zero(eltype(U))
     return Eigen(Λ,U)
 
-    #= TODO:
-        Each of these impositions should properly be their own function.
+    #= TODO: Each of these impositions should properly be their own function.
         The phase and zeros impositions should have two methods each, Real vs Complex types.
 
             real phase should just multiply U[:,i] by -1 if U[i,i] < 0.
@@ -182,4 +183,4 @@ function dressedbasis(H::AbstractMatrix{<:Number})
 end
 
 
-end
+end # END MODULE

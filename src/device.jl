@@ -1,8 +1,9 @@
 #= Implements encapsulations for device properties, and some standard devices. =#
 
-# include("./utils.jl")
-
 module Devices
+
+import LinearAlgebra: Hermitian
+
 import ..Utils
 
 # AUXILIARY STRUCTURE TO FACILITATE REPRESENTATION OF QUBIT COUPLINGS
@@ -21,7 +22,7 @@ An abstract representation of a quantum computer describing qubit frequencies an
 # Implementation
 A valid Device `device` should implement two methods:
 - `Base.length(device)` number of qubits (alternatively, just include an `n` attribute)
-- `static_hamiltonian(device, nstates)` matrix representation with `nstates` for each qubit
+- `static_hamiltonian(device, m)` matrix representation with `m` for each qubit
 """
 abstract type Device end
 
@@ -33,17 +34,17 @@ Fetch the number of qubits in the device.
 Base.length(device::Device) = device.n
 
 """
-    static_hamiltonian(device::Device, nstates::Integer=2)
+    static_hamiltonian(device::Device, m::Integer=2)
 
-Construct the matrix representation of the device's static (ie. no fields) Hamiltonian `H`.
+Construct the matrix representation of the device's static (no pulses) Hamiltonian `H`.
 
-Let `n`≡`length(device)`:
-    `H` acts on the space of `n` qubits each with `nstates` levels.
-    Thus, the matrix representation is a square Matrix with `nstates ^ n` rows.
+Let ``n``≡`length(device)`:
+    `H` acts on the space of ``n`` qubits each with ``m`` levels.
+    Thus, the matrix representation is a Hermitian matrix with ``m^n`` rows.
 
 TODO: learn how/when to work with sparse matrices
 """
-static_hamiltonian(device::Device, nstates::Integer=2) = error("Not Implemented")
+static_hamiltonian(device::Device, m::Integer=2) = error("Not Implemented")
 
 
 
@@ -93,21 +94,19 @@ struct Transmon <: Device
 end
 
 """
-    static_hamiltonian(device::Transmon, nstates::Integer)
+    static_hamiltonian(device::Transmon, m::Integer)
 
 Constructs the transmon Hamiltonian
     ``\\sum_q ω_q a_q^† a_q
     - \\sum_q \\frac{δ_q}{2} a_q^† a_q^† a_q a_q
     + \\sum_{⟨pq⟩} g_{pq} (a_p^† a_q + a_q^\\dagger a_p)``.
 
-NOTE: This function is not implemented very efficiently.
-    But, it only needs to happen once...
 """
-function static_hamiltonian(device::Transmon, nstates::Integer=2)
+function static_hamiltonian(device::Transmon, m::Integer=2)
     n = length(device)
-    N = nstates ^ n
+    N = m ^ n
 
-    a_ = Utils.a_matrix(nstates)
+    a_ = Utils.a_matrix(m)
     aT = a_'
 
     H = zeros(N,N)
@@ -129,24 +128,7 @@ function static_hamiltonian(device::Transmon, nstates::Integer=2)
         H += g * (aT1 * a_2 + aT2 * a_1)
     end
 
-    return H
+    return Hermitian(H)
 end
 
-
-
-
-
-
-
-
-
-# CONSTRUCT A DEFAULT_DEVICE FOR CONVENIENT TESTING
-DEFAULT_DEVICE = Transmon(
-    2π .* [4.8080490154634950, 4.8332548172546130],
-    2π .* [0.3101773613134229, 0.2916170385725456],
-    Dict(
-        QubitCouple(1,2) => 2π*0.018312874435769682,
-    ),
-)
-
-end
+end # END MODULE

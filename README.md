@@ -1,50 +1,39 @@
 # ctrlVQEJulia
 
-Welcome! This is Kyle's first attempt at implementing ctrl-VQE in Julia.
-The goal is to produce a working code giving results numerically similar to Oinam's `ctrlq` repository,
-    and to test out a presumably-faster Lanczos method rather than classic Trotterization.
+Welcome!
+This code-base is meant to (one day) be a highly resource-efficient and flexible implementation of ctrl-VQE.
 
-(They're actually the exact same method except the classic "Trotter" version operates in the device basis
-    and treats each time step as independent, leading to rather more matrix exponentiations than are needed.
-The "Lanczos" method will work in the computational basis, enabling somewhat easier treatment of the control Hamiltonian.
-Meanwhile, the action of the device Hamiltonian is actually identical at each time step (so long as they're all the same length),
-    so we only actually need to compute it once.)
+I put a very high value on thorough documentation,
+via both reference documentation (see below) and explanatory comments throughout the code.
+If you find anything unclear (eg.
+    "What on Earth is this code block doing?",
+    "What does this variable name signify?",
+    "Why do you calculate things this way?"
+), please feel free to complain or file a Github issue:
+I want this code to be accessible and understandable to anyone putting it to use.
 
-As this is Kyle's first foray into Julia, there is no expectation of perfectly-optimized code.
-In particular, exactly zero effort is being made to make this code parallelizable.
-That will come in a lower-priority second attempt.
-
-
-
-
-
-## Scripts
-Scripts are located in the `script/` directory and are run from the project directory by ```julia script/<SCRIPT NAME>.jl>```.
-- `trottertest` Consider a single time-step of the control Hamiltonian $H_C=\sum_q Ω_q(t) (e^{iν_qt} a_q + e^{-iν_qt} a_q^†)$.
-  In principle, you should be able to approximate $\exp(-iΔt H_C)$ with a product formula, as long as $Δt$ is small enough.
-  How small does it need to be? This script gives a brief sense of that, plotting a vague measure of error against $Δt$
-  for two different product formulae. But really this was just my trial-by-fire for scientific computing in Julia...
-- `evolvetest` I've replicated Oinam's evolution code; this script runs it and checks that its results more-or-less match.
-  You can run the code yourself to see how much more-or-less is; it gets worse as you increase the duration `T`,
-  but it's close enough that I think I'm okay attributing it to different round-off errors. Maybe.
-- `scalarmultest` I wasn't entirely certain if I should consider Julia's scalar * vector multiplication as better or worse
-  than the element-wise version scalar .* multiplication. There is no appreciable difference.
-- `lanczostest.jl` This script just runs each of the Lanczos evolution methods against the already-tested Trotter method.
-  They all match. ^_^
-- `suzukitest.jl` More careful benchmarking to show how error and time complexity compare between each evolution method.
-  This file just scales up `numsteps`. The more important scaling depends on `N=nstates^nqubits`.
-  Analytically, I'd expect Trotter to scale by `N^3 * numsteps`, while Lanczos will scale by `N^3 + N^2 * numsteps`.
-  That seems consistent with the specific value of `N=9` tested in this file: `Trotter` is about 10 times slower.
-
-  Meanwhile, error behaves as expected:
-  exact diagonalization of $\exp(-i Δt H_C)$ in `Lanczos` gives essentially identical results to `Trotter`.
-  Suzuki expansions of that operator yield somewhat faster times at the cost of noticeable error.
-  What error is acceptable is a judgement call, though in my opinion `suzukiorder=2` should be considered the gold standard.
+Presently, this code features several methods to evolve a wave-function in time given a specific set of pulses,
+but it does not yet implement any cost-function, gradient, or pulse optimization routines.
+They are coming!
+But in the meantime, consider Oinam Meitei's original [`ctrlq`](https://github.com/oimeitei/ctrlq) repository.
 
 
+## Dependencies
 
+Naturally, the Julia language is required to run the code contained in the `ctrlVQEJulia` repository.
 
+The following packages are used somewhere or another in the code:
+```
+Documenter
+Plots
+TensorOperations
+DifferentialEquations
+Polynomials
+SpecialMatrices
+```
 
+Julia will recognize each of these as available packages
+  and offer to install them for you when you attempt to run the dependent code.
 
 ## Usage Tutorial
 
@@ -54,7 +43,31 @@ Scripts are located in the `script/` directory and are run from the project dire
 > cd ctrlVQEJulia
 ```
 
-I'm afraid that's it. I don't have the foggiest idea yet how to properly package Julia code, and I don't plan on having it anytime soon. ^_^
+I'm afraid that's it.
+I don't have the foggiest idea yet how to properly package Julia code,
+  and I don't plan on having it anytime soon. ^_^
+
+### Generate Documentation
+HEY YOU YEAH YOU - I put a lot of effort into my documentation,
+  so you should go through the steps here to build it,
+  and then read it!
+It should really help you "get" how this code works,
+  and if it doesn't, I need you to tell me so I can rewrite it!
+
+If you have not installed Julia's `Documenter` package, type `julia` to enter the REPL, then type a `]` character to enter Pkg mode.
+```
+pkg> add Documenter
+```
+After it has installed, `<backspace>` gets you back to the regular REPL mode. Type `exit()` to go back to shell.
+
+Now generate documentation via:
+```
+> julia make.jl
+```
+
+You can view documentation by opening the newly-created file `docs/build/index.html`.
+Alas, browsers don't know to treat links to _local_ folders as opening their `index.html` files, so navigating the docs locally is a bit awkward.
+The `Documenter` documentation offers some solutions to this (see the big blue note at the bottom of [this section](https://juliadocs.github.io/Documenter.jl/stable/man/guide/#Building-an-Empty-Document)), but personally I prefer to just manually open each index for now.
 
 ### Run Tests
 ```
@@ -63,33 +76,19 @@ I'm afraid that's it. I don't have the foggiest idea yet how to properly package
 
 This will run a few very basic unit tests, although it doesn't itself actually run any evolutions yet...
 
-### Generate Documentation
-If you have not installed Julia's `Documenter` package, type `julia` to enter the REPL, then type a `]` character to enter Pkg mode.
-```
-pkg> add Documenter
-```
-After it has installed, `<backspace>` gets you back to the regular REPL mode.
+A proper software development framework writes tests _first_, and builds software around them.
+I'm not doing that...
 
-Now generate documentation via:
-```
-> cd docs
-> julia make.jl
-> cd ..
-```
-
-You can view documentation by opening the newly-created file `docs/build/index.html`.
-Alas, browsers don't know to treat links to _local_ folders as opening their `index.html` files, so navigating the docs locally is a bit awkward.
-The `Documenter` documentation offers some solutions to this (see the big blue note at the bottom of [this section](https://juliadocs.github.io/Documenter.jl/stable/man/guide/#Building-an-Empty-Document)), but personally I prefer to just manually open each index for now.
+But, I do plan to have a good testing suite _some_ day.
 
 ### Run Scripts
 ```
 > julia script/<SCRIPT NAME>.jl>
 ```
 
-In order to run `trottertest.jl`, you'll need the `Plots` package,
-  and in order to run `suzukitest.jl`, you'll need the `BenchmarkTools` package.
-Type `julia` to enter the REPL, then type a `]` character to enter Pkg mode.
-```
-pkg> add <Package Name>
-```
-After it has installed, `<backspace>` gets you back to the regular REPL mode.
+I create and discard scripts at will,
+and generally make little effort to keep old scripts up-to-date with changes to code.
+So, they are provided as-is with no expectation of functionality.
+
+Nevertheless, they too are generally well-documented in the code,
+so they may be interesting to glance at.

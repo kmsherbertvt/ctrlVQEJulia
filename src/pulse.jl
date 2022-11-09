@@ -9,10 +9,10 @@ A quantum control experiment will typically use an Array of PulseTemplates,
     with one PulseTemplate for each qubit.
 
 # Implementation
-A valid PulseTemplate pt should implement three methods:
-- `Base.length(pt)`: duration of pulse (alternatively, just include a `duration` attribute)
-- `frequency(pt, t)`: frequency of pulse at time `t`
-- `amplitude(pt, t)`: amplitude of pulse at time `t`
+A valid PulseTemplate `pt` should implement three methods:
+- `Base.length(pt)` duration of pulse (alternatively, just include a `duration` attribute)
+- `frequency(pt, t)` frequency of pulse at time `t`
+- `amplitude(pt, t)` amplitude of pulse at time `t`
 
 """
 abstract type PulseTemplate end
@@ -37,7 +37,6 @@ frequency(pt::PulseTemplate, t::Number) = error("Not Implemented")
 
 Fetch the amplitude (GHz) for this pulse at a specific time `t`.
 
-# TODO: How is an amplitude in GHz?
 """
 amplitude(pt::PulseTemplate, t::Number) = error("Not Implemented")
 
@@ -59,7 +58,6 @@ A basic square pulse has a constant frequency and amplitudes follow a step funct
 
 Times numerically equal to a breakpoint in `steptimes` are treated as after the breakpoint.
 
-# TODO: How is an amplitude in GHz? Or am I getting wires crossed...
 """
 struct BasicSquarePulse <: PulseTemplate
     duration::Number
@@ -84,4 +82,4 @@ amplitude(pt::BasicSquarePulse, t::Number) = (
     return isnothing(ix) ? pt.amplitudes[end] : pt.amplitudes[ix]
 )
 
-end
+end # END MODULE
