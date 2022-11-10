@@ -231,8 +231,8 @@ end
         n = length(device),             # NUMBER OF QUBITS
         m = round(Int, N^(1/n)),        # NUMBER OF LEVELS ON EACH QUBIT
         T = length(pulses[1]),          # TOTAL DURATION OF EVOLUTION
-        t_= range(0,T,numsteps),        # TIME GRID
-        Δt= numsteps > 1 ? t_[2]-t_[1] : T, # DURATION OF EACH TIME STEP
+        t_= range(0,T,numsteps+1),      # TIME GRID
+        Δt= T / numsteps,               # DURATION OF EACH TIME STEP
 
         # CALCULATED VALUES (pass these in to significantly speed up optimizations)
         ΛD = nothing,                   # EIGENVALUES OF STATIC HAMILTONIAN
@@ -263,8 +263,8 @@ function evolve!(
     n = length(device),             # NUMBER OF QUBITS
     m = round(Int, N^(1/n)),        # NUMBER OF LEVELS ON EACH QUBIT
     T = length(pulses[1]),          # TOTAL DURATION OF EVOLUTION
-    t_= range(0,T,numsteps),        # TIME GRID
-    Δt= numsteps > 1 ? t_[2]-t_[1] : T, # DURATION OF EACH TIME STEP
+    t_= range(0,T,numsteps+1),      # TIME GRID
+    Δt= T / numsteps,               # DURATION OF EACH TIME STEP
 
     # CALCULATED VALUES (pass these in to significantly speed up optimizations)
     ΛD = nothing,                   # EIGENVALUES OF STATIC HAMILTONIAN
@@ -370,8 +370,8 @@ end
         n = length(device),                 # NUMBER OF QUBITS
         m = round(Int, N^(1/n)),            # NUMBER OF LEVELS ON EACH QUBIT
         T = length(pulses[1]),              # TOTAL DURATION OF EVOLUTION
-        t_= range(0,T,numsteps),            # TIME GRID
-        Δt= numsteps > 1 ? t_[2]-t_[1] : T, # DURATION OF EACH TIME STEP
+        t_= range(0,T,numsteps+1),          # TIME GRID
+        Δt= T / numsteps,                   # DURATION OF EACH TIME STEP
 
         # CALCULATED VALUES (pass these in to significantly speed up optimizations)
         ΛD = nothing,                       # EIGENVALUES OF STATIC HAMILTONIAN
@@ -421,8 +421,8 @@ function evolve!(
     n = length(device),                 # NUMBER OF QUBITS
     m = round(Int, N^(1/n)),            # NUMBER OF LEVELS ON EACH QUBIT
     T = length(pulses[1]),              # TOTAL DURATION OF EVOLUTION
-    t_= range(0,T,numsteps),            # TIME GRID
-    Δt= numsteps > 1 ? t_[2]-t_[1] : T, # DURATION OF EACH TIME STEP
+    t_= range(0,T,numsteps+1),          # TIME GRID
+    Δt= T / numsteps,                   # DURATION OF EACH TIME STEP
 
     # CALCULATED VALUES (pass these in to significantly speed up optimizations)
     ΛD = nothing,                       # EIGENVALUES OF STATIC HAMILTONIAN
@@ -566,8 +566,8 @@ end
         n = length(device),                 # NUMBER OF QUBITS
         m = round(Int, N^(1/n)),            # NUMBER OF LEVELS ON EACH QUBIT
         T = length(pulses[1]),              # TOTAL DURATION OF EVOLUTION
-        t_= range(0,T,numsteps),            # TIME GRID
-        Δt= numsteps > 1 ? t_[2]-t_[1] : T, # DURATION OF EACH TIME STEP
+        t_= range(0,T,numsteps+1),          # TIME GRID
+        Δt= T / numsteps,                   # DURATION OF EACH TIME STEP
 
         # CALCULATED VALUES (pass these in to significantly speed up optimizations)
         ΛD = nothing,                       # EIGENVALUES OF STATIC HAMILTONIAN
@@ -641,8 +641,8 @@ function evolve!(
     n = length(device),                 # NUMBER OF QUBITS
     m = round(Int, N^(1/n)),            # NUMBER OF LEVELS ON EACH QUBIT
     T = length(pulses[1]),              # TOTAL DURATION OF EVOLUTION
-    t_= range(0,T,numsteps),            # TIME GRID
-    Δt= numsteps > 1 ? t_[2]-t_[1] : T, # DURATION OF EACH TIME STEP
+    t_= range(0,T,numsteps+1),          # TIME GRID
+    Δt= T / numsteps,                   # DURATION OF EACH TIME STEP
 
     # CALCULATED VALUES (pass these in to significantly speed up optimizations)
     ΛD = nothing,                       # EIGENVALUES OF STATIC HAMILTONIAN
