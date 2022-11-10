@@ -3,7 +3,7 @@
 module Evolutions
 
 import DifferentialEquations: ODEProblem, solve
-import LinearAlgebra: eigen, Hermitian
+import LinearAlgebra: eigen, Hermitian, Diagonal
 import TensorOperations: ncon
 
 import ..Utils
