@@ -2,8 +2,9 @@
 
 module Evolutions
 
-import DifferentialEquations: ODEProblem, solve
 import LinearAlgebra: eigen, Hermitian, Diagonal
+import DifferentialEquations: ODEProblem, solve
+import KrylovKit: exponentiate
 import TensorOperations: ncon
 
 import ..Utils
@@ -14,7 +15,6 @@ import ..Devices
 abstract type EvolutionMode end
 struct ODE     <: EvolutionMode end
 struct Direct  <: EvolutionMode end
-struct Krylov  <: EvolutionMode end
 struct Lanczos <: EvolutionMode end
 struct Rotate  <: EvolutionMode end
 struct Prediag <: EvolutionMode end
@@ -304,6 +304,100 @@ function evolve!(
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
 
+
+"""
+    evolve!(
+        ψ::AbstractVector{<:Number},
+        pulses::AbstractVector{<:Pulses.PulseTemplate},
+        device::Devices.Device,
+        ::Type{Direct};
+        iobasis::IOBasisMode = DeviceBasis(),
+        numsteps::Integer = 2000,
+
+        # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
+        N = length(ψ),                  # SIZE OF STATEVECTOR
+        n = length(device),             # NUMBER OF QUBITS
+        m = round(Int, N^(1/n)),        # NUMBER OF LEVELS ON EACH QUBIT
+        T = length(pulses[1]),          # TOTAL DURATION OF EVOLUTION
+        t_= range(0,T,numsteps+1),      # TIME GRID
+        Δt= T / numsteps,               # DURATION OF EACH TIME STEP
+
+        # CALCULATED VALUES (pass these in to significantly speed up optimizations)
+        ΛD = nothing,                   # EIGENVALUES OF STATIC HAMILTONIAN
+        UD = nothing,                   # CORRESPONDING EIGENVECTORS
+        a_ = nothing,                   # LIST OF ANNIHILATION OPERATORS, IN STATIC BASIS
+    )
+
+Trotterize the time-evolution operator,
+    calculating the matrix exponential action ``\\exp(-𝒊·Δt·H) |ψ⟩`` at each time step.
+
+The keyword argument `numsteps` specifies the number of time steps;
+    time scales linearly, and accuracy scales inversely.
+
+This method is the only one that invokes an ``O(N^3)`` operation at every time step.
+Don't use it, except to illustrate how much better other methods are. ^_^
+
+"""
+function evolve!(
+    ψ::AbstractVector{<:Number},
+    pulses::AbstractVector{<:Pulses.PulseTemplate},
+    device::Devices.Device,
+    ::Type{Lanczos};
+    iobasis::IOBasisMode = DeviceBasis(),
+    numsteps::Integer = 2000,
+
+    # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
+    N = length(ψ),                  # SIZE OF STATEVECTOR
+    n = length(device),             # NUMBER OF QUBITS
+    m = round(Int, N^(1/n)),        # NUMBER OF LEVELS ON EACH QUBIT
+    T = length(pulses[1]),          # TOTAL DURATION OF EVOLUTION
+    t_= range(0,T,numsteps+1),      # TIME GRID
+    Δt= T / numsteps,               # DURATION OF EACH TIME STEP
+
+    # CALCULATED VALUES (pass these in to significantly speed up optimizations)
+    ΛD = nothing,                   # EIGENVALUES OF STATIC HAMILTONIAN
+    UD = nothing,                   # CORRESPONDING EIGENVECTORS
+    a_ = nothing,                   # LIST OF ANNIHILATION OPERATORS, IN STATIC BASIS
+)
+    ######################################################################################
+    #                            PRELIMINARY CALCULATIONS
+
+    if any((ΛD, UD) .=== nothing)
+        HD = Devices.static_hamiltonian(device, m)  # DEVICE HAMILTONIAN
+        ΛD, UD = Utils.dressedbasis(HD)             # DEVICE EIGENVALUES AND EIGENVECTORS
+    end; if a_ === nothing
+        a_ = Utils.algebra(n, m, basis=UD)          # LIST OF ROTATED ANNIHILATION OPERATORS
+    end
+
+    if iobasis isa QubitBasis;  ψ .= UD' * ψ;   end;    # ROTATE INTO DEVICE BASIS
+
+    ######################################################################################
+    #                                 TIME EVOLUTION
+
+    # FIRST TIME STEP   (use Δt/2 for first and last time step)
+    ψ .= exponentiate(
+        _interactionhamiltonian(pulses, ΛD, a_, t_[1]; N=N, n=n), -im*Δt/2,  ψ
+    )[1]        # `exponentiate` RETURNS A TUPLE, WE CARE ONLY ABOUT FIRST ELEMENT
+    # TODO: Krylov is a carbon copy of this method, except this line.
+
+    for i ∈ 2:numsteps
+        ψ .= exponentiate(
+            _interactionhamiltonian(pulses, ΛD, a_, t_[i]; N=N, n=n), -im*Δt, ψ
+        )[1]    # `exponentiate` RETURNS A TUPLE, WE CARE ONLY ABOUT FIRST ELEMENT
+        # TODO: Krylov is a carbon copy of this method, except this line.
+    end
+
+    # LAST TIME STEP    (use Δt/2 for first and last time step)
+    ψ .= exponentiate(
+        _interactionhamiltonian(pulses, ΛD, a_, t_[end]; N=N, n=n), -im*Δt/2, ψ
+    )[1]        # `exponentiate` RETURNS A TUPLE, WE CARE ONLY ABOUT FIRST ELEMENT
+    # TODO: Krylov is a carbon copy of this method, except this line.
+
+    ######################################################################################
+
+    if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
+end
+
 """
     _interactionhamiltonian(
         pulses::AbstractVector{<:Pulses.PulseTemplate}, # PULSE TEMPLATES FOR EACH QUBIT
@@ -348,6 +442,7 @@ function _interactionhamiltonian(
     expD = Diagonal(exp.((im*t) * ΛD))  # DEVICE ACTION
     HIC = expD * HC * expD'     # INTERACTION-PICTURE CONTROL HAMILTONIAN
 
+    return Hermitian(HIC)
     # TODO: pre-allocate HC and expD.
 end
 
