@@ -288,18 +288,18 @@ function evolve!(
 
     # FIRST TIME STEP   (use Δt/2 for first and last time step)
     ψ .= exp( (-im*Δt/2) * _interactionhamiltonian(pulses, ΛD, a_, t_[1]; N=N, n=n)) * ψ
-    # TODO: Krylov is a carbon copy of this method, except this line.
 
     for i ∈ 2:numsteps
         ψ .= exp( (-im*Δt) * _interactionhamiltonian(pulses, ΛD, a_, t_[i]; N=N, n=n)) * ψ
-        # TODO: Krylov is a carbon copy of this method, except this line.
     end
 
     # LAST TIME STEP    (use Δt/2 for first and last time step)
     ψ .= exp( (-im*Δt/2) * _interactionhamiltonian(pulses, ΛD, a_, t_[end]; N=N, n=n)) * ψ
-    # TODO: Krylov is a carbon copy of this method, except this line.
 
     ######################################################################################
+
+    # RE-NORMALIZE THIS STATE
+    ψ .= ψ / √abs(ψ'*ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
@@ -378,22 +378,22 @@ function evolve!(
     ψ .= exponentiate(
         _interactionhamiltonian(pulses, ΛD, a_, t_[1]; N=N, n=n), -im*Δt/2,  ψ
     )[1]        # `exponentiate` RETURNS A TUPLE, WE CARE ONLY ABOUT FIRST ELEMENT
-    # TODO: Krylov is a carbon copy of this method, except this line.
 
     for i ∈ 2:numsteps
         ψ .= exponentiate(
             _interactionhamiltonian(pulses, ΛD, a_, t_[i]; N=N, n=n), -im*Δt, ψ
         )[1]    # `exponentiate` RETURNS A TUPLE, WE CARE ONLY ABOUT FIRST ELEMENT
-        # TODO: Krylov is a carbon copy of this method, except this line.
     end
 
     # LAST TIME STEP    (use Δt/2 for first and last time step)
     ψ .= exponentiate(
         _interactionhamiltonian(pulses, ΛD, a_, t_[end]; N=N, n=n), -im*Δt/2, ψ
     )[1]        # `exponentiate` RETURNS A TUPLE, WE CARE ONLY ABOUT FIRST ELEMENT
-    # TODO: Krylov is a carbon copy of this method, except this line.
 
     ######################################################################################
+
+    # RE-NORMALIZE THIS STATE
+    ψ .= ψ / √abs(ψ'*ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
@@ -571,6 +571,9 @@ function evolve!(
     ψ .*= exp.( (im*T) * ΛD)            # ROTATE PHASES FOR ONE LAST TIME EVOLUTION
 
     ######################################################################################
+
+    # RE-NORMALIZE THIS STATE
+    ψ .= ψ / √abs(ψ'*ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
@@ -820,6 +823,9 @@ function evolve!(
     ψ .*= exp.( (im*T) * ΛD)            # ROTATE PHASES FOR ONE LAST TIME EVOLUTION
 
     ######################################################################################
+
+    # RE-NORMALIZE THIS STATE
+    ψ .= ψ / √abs(ψ'*ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
