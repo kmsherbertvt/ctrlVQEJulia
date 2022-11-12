@@ -2,7 +2,7 @@
 
 module Evolutions
 
-import LinearAlgebra: eigen, Hermitian, Diagonal
+import LinearAlgebra: eigen, Hermitian, Diagonal, norm
 import DifferentialEquations: ODEProblem, solve
 import KrylovKit: exponentiate
 import TensorOperations: ncon
@@ -206,7 +206,7 @@ function evolve!(
     ψ .= solution.u[end]
 
     # RE-NORMALIZE THIS STATE
-    ψ .= ψ / √abs(ψ'*ψ)
+    ψ .= ψ / norm(ψ)
 
     ######################################################################################
 
@@ -299,7 +299,7 @@ function evolve!(
     ######################################################################################
 
     # RE-NORMALIZE THIS STATE
-    ψ .= ψ / √abs(ψ'*ψ)
+    ψ .= ψ / norm(ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
@@ -310,7 +310,7 @@ end
         ψ::AbstractVector{<:Number},
         pulses::AbstractVector{<:Pulses.PulseTemplate},
         device::Devices.Device,
-        ::Type{Direct};
+        ::Type{Lanczos};
         iobasis::IOBasisMode = DeviceBasis(),
         numsteps::Integer = 2000,
 
@@ -393,7 +393,7 @@ function evolve!(
     ######################################################################################
 
     # RE-NORMALIZE THIS STATE
-    ψ .= ψ / √abs(ψ'*ψ)
+    ψ .= ψ / norm(ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
@@ -573,7 +573,7 @@ function evolve!(
     ######################################################################################
 
     # RE-NORMALIZE THIS STATE
-    ψ .= ψ / √abs(ψ'*ψ)
+    ψ .= ψ / norm(ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
@@ -825,7 +825,7 @@ function evolve!(
     ######################################################################################
 
     # RE-NORMALIZE THIS STATE
-    ψ .= ψ / √abs(ψ'*ψ)
+    ψ .= ψ / norm(ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
