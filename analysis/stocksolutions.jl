@@ -1,15 +1,16 @@
 #= Stock solutions for simple systems. =#
 
-module Analytical
+module StockSolutions
 
+import LinearAlgebra: norm
 import Polynomials: Polynomial, roots
 import SpecialMatrices: Vandermonde
 
 function onequbitsquarepulse(
     ψI,             # INITIAL WAVE FUNCTION
+    T,              # PULSE DURATION (ns)
     ν,              # PULSE FREQUENCY
     Ω₀,             # PULSE AMPLITUDE
-    T,              # PULSE DURATION (ns)
     ω₀,             # DEVICE RESONANCE FREQUENCY
 )
     # HELPFUL CONSTANTS
@@ -29,14 +30,17 @@ function onequbitsquarepulse(
         A₁*exp( im*Δ * (η+1)/2 * T) + B₁*exp(-im*Δ * (η-1)/2 * T),
     ]
 
+    # RE-NORMALIZE THIS STATE
+    ψT .= ψT / norm(ψT)
+
     return ψT
 end
 
 function onequtritsquarepulse(
     ψI,             # INITIAL WAVE FUNCTION
+    T,              # PULSE DURATION (ns)
     ν,              # PULSE FREQUENCY
     Ω₀,             # PULSE AMPLITUDE
-    T,              # PULSE DURATION (ns)
     ω₀,             # DEVICE RESONANCE FREQUENCY
     δ,              # DEVICE ANHARMONICITY
 )
@@ -87,6 +91,9 @@ function onequtritsquarepulse(
             -A₂₁*(A₁₀*ψI[1] + im*D₂₁*ψI[2] + A₂₁*ψI[3]) # c̈(t=0)
         ])(T),                          # EVALUATE SOLUTION AT END OF THE PULSE
     ]
+
+    # RE-NORMALIZE THIS STATE
+    ψT .= ψT / norm(ψT)
 
     return ψT
 end
