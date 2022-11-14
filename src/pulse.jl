@@ -73,6 +73,16 @@ struct BasicSquarePulse <: PulseTemplate
     )
 end
 
+"""
+    BasicSquarePulse(duration::Number, frequency::Number, amplitude::Number)
+
+Construct a single-window square pulse.
+
+"""
+BasicSquarePulse(duration::Number, frequency::Number, amplitude::Number) = (
+    BasicSquarePulse(duration, frequency, [amplitude], Number[])
+)
+
 frequency(pt::BasicSquarePulse, t::Number) = pt.frequency
 
 amplitude(pt::BasicSquarePulse, t::Number) = (
