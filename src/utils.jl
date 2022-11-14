@@ -2,7 +2,7 @@
 
 module Utils
 
-import LinearAlgebra: kron, I, eigen, Eigen, Hermitian
+import LinearAlgebra: kron, I, eigen, Eigen, Hermitian, norm
 
 
 """
@@ -182,5 +182,12 @@ function dressedbasis(H::Hermitian)
     =#
 end
 
+"""
+    infidelity(ψ0, ψ)
+
+Calculates ``1 - |⟨ψ0|ψ⟩|^2``.
+
+"""
+infidelity(ψ,φ) = 1 - abs2(ψ'*φ)
 
 end # END MODULE
