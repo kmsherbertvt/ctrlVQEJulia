@@ -94,6 +94,31 @@ struct Transmon <: Device
 end
 
 """
+    selectqubits(slice::AbstractVector{<:Integer}, device::Transmon)
+
+Use only a sub-section of a device.
+
+The `slice` vector indicates which qubits to use, and in what order.
+
+"""
+function selectqubits(slice::AbstractVector{<:Integer}, device::Transmon)
+    # CONSTRUCT PERMUTATION
+    σ = zeros(Int, device.n)
+    for q in eachindex(slice)
+        σ[slice[q]] = q
+    end
+
+    # FILTER COUPLING MAP
+    gmap = Dict{QubitCouple,Number}(
+        QubitCouple(σ[pair.q1],σ[pair.q2]) => g     # RE-LABEL COUPLINGS BY ORDER IN SLICE
+            for (pair, g) in device.gmap
+            if all((σ[pair.q1],σ[pair.q2]) .!= 0)   # OMIT COUPLINGS ABSENT FROM SLICE
+    )
+
+    return Transmon(device.ω[slice], device.δ[slice], gmap)
+end
+
+"""
     static_hamiltonian(device::Transmon, m::Integer)
 
 Constructs the transmon Hamiltonian
@@ -130,5 +155,38 @@ function static_hamiltonian(device::Transmon, m::Integer=2)
 
     return Hermitian(H)
 end
+
+
+""" The default four-qubit device used in ctrlq.
+
+I'm not sure exactly where the numbers came from.
+The frequencies and anharmonicities are consistent with IBM devices,
+    but I don't know of any IBM devices with just four qubits.
+Also the anharmonicities and coupling constants form very noticeable patterns...
+I'm guessing they were selected somewhat arbitrarily. ^_^
+But I'd rather use these arbitrary values than try to come up with my own.
+
+Note however that this device FAILS on ctrlq;
+    "dressing" the device eigenbasis DUPLICATES some rows and OMITS others.
+
+"""
+DEFAULT_DEVICE = Transmon([
+    4.808049015463495,
+    4.833254817254613,
+    4.940051121317842,
+    4.795960998582043,
+], [
+    0.3101773613134229,
+    0.2916170385725456,
+    0.3301773613134229,
+    0.2616170385725456,
+], Dict(
+    QubitCouple(1,2) => 0.018312874435769682,
+    QubitCouple(1,3) => 0.019312874435769682,
+    QubitCouple(1,4) => 0.020312874435769682,
+    QubitCouple(2,3) => 0.021312874435769682,
+    QubitCouple(2,4) => 0.018312874435769682,
+    QubitCouple(3,4) => 0.019312874435769682,
+))
 
 end # END MODULE
