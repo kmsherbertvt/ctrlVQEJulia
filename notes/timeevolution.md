@@ -241,7 +241,7 @@ Each $\mathbf{E_i}$ can be treated successively so memory requirements can in pr
 However, maintaining each $\hat a_q$ in memory increases this to $O(nN^2)$.
 
 
-#### 'Lanczos'
+#### `Lanczos`
 
 This method is almost entirely identical to `Direct`, except that it avoids calculating the matrix exponential $\mathbf{E_i}$ explicitly.
 Instead, a "Lanczos" scheme is used to construct a "Krylov" sub-space of the generating matrix $\mathbf{V_i}$,
