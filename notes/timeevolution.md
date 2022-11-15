@@ -250,4 +250,5 @@ Instead, a "Lanczos" scheme is used to construct a "Krylov" sub-space of the gen
 I'm not very familiar with the Lanczos scheme _or_ the Krylov subspace, but from what I understand,
   the runtime of a proper implementation _should_ be bounded by $O(rN^2)$, but with a very steep overhead.
 Memory requirements are probably also a very steep overhead,
-  but should scale asymptotically as $O(N^2)$, just as in `Direct`.
+  but should scale asymptotically as $O(nN^2)$, just as in `Direct`.
+The studious reader can research the method used [here](https://jutho.github.io/KrylovKit.jl/stable/man/matfun/#KrylovKit.exponentiate).
