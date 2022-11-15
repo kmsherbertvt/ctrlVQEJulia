@@ -33,8 +33,8 @@ Our problem is one of a time-dependent perturbation:
 $$ \hat H = \hat H_0 + \hat V(t) $$
 
 #### Time-Independent Hamiltonian
-Associate with each transmon qubit $q$ a set of vibrational modes $|0⟩$, $|1⟩$, $|2⟩$, etc.
-If we approximate these vibrational modes as residing in a harmonic potential, we can say they are spaced apart by $ω_q$ energy units.
+Associate with each of $n$ transmons a set of vibrational modes $|0⟩$, $|1⟩$, $|2⟩$, etc.
+If we approximate the vibrational modes of transmon $q$ as residing in a harmonic potential, we can say they are spaced apart by $ω_q$ energy units.
 If we go a step further and assume an ever-so-slightly _anharmonic_ potential,
   we can say that the spacing of each energy level is reduced by a small amount $δ_q$ at each level.
 Finally, we will say that some transmons are coupled,
@@ -65,7 +65,8 @@ In the Schrödinger picture, the time evolution of $|ψ⟩$ is given by:
 
 $$ i \frac{∂}{∂t} |ψ⟩ = \hat H |ψ⟩ $$
 
-By truncating each transmon to just $m$ modes, we can represent $|ψ⟩$ and $\hat H$ at any given time with a finite vector and a finite matrix.
+By truncating each transmon to just $m$ modes, we can represent $|ψ⟩$ and $\hat H$ at any given time
+  with a finite $N$-dimensional vector and a finite $N×N$ matrix, where $N≡m^n$.
 Thus, Schrödinger's equation is a linear first-order system of (many) differential equations,
   and in principle it can be integrated numerically.
   
@@ -73,10 +74,7 @@ Alternatively, we can solve this system symbolically, by momentarily pretending 
 
 $$ |ψ(t)⟩ = e^{ -i \int_0^t \hat H dt } |ψ(0)⟩ $$
 
-When $H$ is time-independent, solving the time-evolution of $|ψ⟩$ just reduces to characterizing the matrix-exponential operator
-
-$$ \hat U(t) ≡ e^{-it \hat H} $$
-
+When $H$ is time-independent, solving the time-evolution of $|ψ⟩$ just reduces to characterizing the matrix-exponential operator $e^{-it \hat H}$.
 When $H$ is time-dependent, a robust analytical treatment of the strange exponentiated-matrix-integral object
   requires the rather arcane "time-ordering operator".
 Its effect on a numerical treatment is somewhat more intuitive:
@@ -103,16 +101,16 @@ For time-dependent perturbations, it is helpful to adopt instead the "interactio
 $$ i \frac{∂}{∂t} |ψ_I⟩ = \hat V_I |ψ_I⟩ $$
 
 The point of this equation is to abstract away the time-independent part of $\hat H = \hat H_0 + \hat V(t)$.
-Since $H_0$ is time-independent, it makes sense to define the matrix-exponential operator $\hat U_0(t)≡e^{-it \hat H_0}$.
+Since $H_0$ is time-independent, it makes sense to work with the static time-evolution operator $e^{-it \hat H_0}$.
 Now,
 
 $$\begin{array}{rl}
-  |ψ_I(t)⟩ &≡ \hat U(-t) |ψ(t)⟩ \\
-    V_I(t) &≡ \hat U(-t) \hat V(t) \hat U(t)
+   |ψ_I(t)⟩ &≡ e^{it \hat H_0} |ψ(t)⟩ \\
+\hat V_I(t) &≡ e^{it \hat H_0} \hat V(t) e^{-it \hat H_0}
 \end{array}$$
 
-Roughly speaking, $|ψ_I⟩$ represents the state $|ψ⟩$ as if it were not subject to the time-independent $\hat H_0$.
-Perhaps more to the point, you can solve for $|ψ⟩$ simply by evolving $|ψ_I⟩$ in time subject _only_ to the time-independent $\hat H_0$.
+Vaguely speaking, $|ψ_I⟩$ represents the state $|ψ⟩$ as if it were not subject to the time-independent $\hat H_0$.
+More precisely, and more usefully, you can solve for $|ψ⟩$ simply by evolving $|ψ_I⟩$ in time subject _only_ to the time-independent $\hat H_0$.
 
 We do this because, at least for oscillating field problems, the system of differential equations tends to look simpler in the interaction picture.
 Therefore, we will synthesize the results of this section and the previous to form our two main time-evolution methods:
@@ -136,11 +134,11 @@ $$ \vec ψ(t) = e^{ -i Δt \mathbf{V_r} } … e^{ -i Δt \mathbf{V_2} } · e^{ -
 #### Trapezoidal Integration
 Recall that the Trotterization method required discretizing an integral into a sum, and doing so introduced subscripts into our operators:
 
-$$ \int \hat H(t) dt → \sum_{i=1}^r \hat H_i Δt $$
+$$ \int_0^T \hat H(t) dt → \sum_{i=1}^r \hat H_i Δt $$
 
 We need to decide what $\hat H_i$ means!
 
-Just think of the good-old Riemann sums you used when you were first learning what an "integral" _is_.
+Just think of the good-old Riemann sums you used when you were first learning what an "integral" even is.
 We had _left_-handed sums, _right_-handed sums, and then a more symmetric _trapezoidal rule_.
 
 The left-handed sum would evaluate a function at the "left-handed" time point, ie. the earlier time for each step.
@@ -150,7 +148,7 @@ Finally, the trapezoidal rule _averages_ the function at both time points:
 
 $$ \hat H_i ≡ \frac{1}{2} \left\[ \hat H((i-1)Δt) + \hat H(iΔt) \right] $$
 
-This one tends to be significantly more accurate, so it's the one we're going to use.
+This one tends to be quite a bit more accurate, so it's the one we're going to use.
 (Like in Trotterization, there are higher-order formulae that peform significantly better with fewer $r$,
   but I don't know how they interact with the time-ordering operator in the next step,
   so I've elected to not pursue them.)
@@ -160,10 +158,96 @@ Now let's see what effect this has on our Trotterization method:
 $$\begin{array}{rl}
   \vec ψ(t) &= e^{ -i Δt \mathbf{V_r} } … e^{ -i Δt \mathbf{V_2} } · e^{ -i Δt \mathbf{V_1} } \vec ψ(0) \\
             &= e^{ -i \frac{Δt}{2} \left\[\mathbf{V}(T)+\mathbf{V}(T-Δt)\right\] } … e^{ -i \frac{Δt}{2} \left\[\mathbf{V}(2Δt)+\mathbf{V}(Δt)\right\] } · e^{ -i \frac{Δt}{2} \left\[\mathbf{V}(Δt)+\mathbf{V}(0)\right\] } \vec ψ(0) \\
-            &= \left( e^{ -i \frac{Δt}{2} \mathbf{V}(T) } · e^{ -i \frac{Δt}{2} \mathbf{V}(T-Δt) } \right) … \left( e^{ -i \frac{Δt}{2} \mathbf{V}(2Δt) } · e^{ -i \frac{Δt}{2} \mathbf{V}(Δt) } \right) · \left( e^{ -i \frac{Δt}{2} \mathbf{V}(Δt) } · e^{ -i \frac{Δt}{2} \mathbf{V}(0) } \right) \vec ψ(0) \\
+            &≈ \left( e^{ -i \frac{Δt}{2} \mathbf{V}(T) } · e^{ -i \frac{Δt}{2} \mathbf{V}(T-Δt) } \right) … \left( e^{ -i \frac{Δt}{2} \mathbf{V}(2Δt) } · e^{ -i \frac{Δt}{2} \mathbf{V}(Δt) } \right) · \left( e^{ -i \frac{Δt}{2} \mathbf{V}(Δt) } · e^{ -i \frac{Δt}{2} \mathbf{V}(0) } \right) \vec ψ(0) \\
             &= e^{ -i \frac{Δt}{2} \mathbf{V}(T) } · e^{ -i Δt \mathbf{V}(T-Δt) } … e^{ -i Δt \mathbf{V}(2Δt) } · e^{ -i Δt \mathbf{V}(Δt) } · e^{ -i \frac{Δt}{2} \mathbf{V}(0) } \vec ψ(0) \\
 \end{array}$$
 
 Unpacking the new terms in the exponentials via Trotterization, and being careful to keep all terms time-ordered,
   we discover that the trapezoidal rule asks us to perform a time evolution at all $r+1$ time points in our discrete grid,
   but to treat the very first and last points as though the time-spacing $Δt$ were halved.
+Note that, while this derivation seems to incur some extra error from factoring the left- and right-handed contributions at each time-step,
+  it does not affect the error-_scaling_ already implicit in the original Trotterization formula.
+
+Please note that **all Trotter evolution methods implemented in code use the trapezoidal rule**.
+However, for the remainder of these notes, we will omit explicit reference to it, to keep notation a little simpler.
+
+
+### Evolution Methods
+
+The code includes a number of distinct evolution methods; this section attempts to digest each one mathematically.
+
+#### `ODE`
+
+`ODE` is short for "Ordinary Differential Equation" and at present,
+  this method is the only performing time evolution by solving a system of linear differential equations.
+  
+$$ \dot{\vec ψ} = -i \mathbf{V}(t) · \vec ψ $$
+
+There are in fact _countless_ ways to numerically solve a system of differential equations.
+I don't know very much about them, which is why _this_ method gives Julia the problem and lets _her_ decide how to solve it.
+In other words, you should consider this method a black box.
+An unsophisticated benchmarking analysis indicates that Julia selects a fairly low-overhead $O(N^3)$ algorithm,
+  but there is presently no particular guarantee that scaling behavior is consistent for larger systems.
+
+#### `Direct`
+
+`Direct` indicates "Direct Exponentiation" at each time step.
+It takes the Trotter time-evolution formula very literally.
+
+$$ \vec ψ(t) = e^{ -i Δt \mathbf{V_r} } … e^{ -i Δt \mathbf{V_2} } · e^{ -i Δt \mathbf{V_1} } \vec ψ(0) $$
+
+Each of these matrix exponentials is individually calculated, using Julia's default matrix exponentiation.
+_Assuming_ Julia is implemented the way _I_ would have implemented it, it is equivalent to the following:
+
+- For each time point $t$, diagonalize $\mathbf{V_i} = \mathbf{U_{V_i}} · \mathbf{Λ_{V_i}} · \mathbf{U_{V_i}}^†$,
+    where $\mathbf{U_{V_i}}$ is a unitary matrix of eigenvectors and $\mathbf{Λ_{V_i}}$ is a diagonal matrix of eigenvalues.
+  This step is the bottleneck, costing $O(N^3)$ runtime.
+- Next, calculate $e^{-iΔt\mathbf{Λ_{V_i}}}$.
+  If you like, this is the desired matrix exponential _in the eigenbasis_.
+  Because $\mathbf{Λ_{V_i}}$ is diagonal, this step costs only $O(N)$ runtime.
+- Finally, return to the original basis by conjugating with $\mathbf{U_{V_i}}$, which involves an $O(N^3)$ matrix multiplication:
+
+$$ \mathbf{E_i} = \mathbf{U_{V_i}} · e^{-iΔt\mathbf{Λ_{V_i}}} · \mathbf{U_{V_i}}^† $$
+
+We have so far accumulated a total runtime of $O(rN^3)$ and the following formula:
+
+$$ \vec ψ(t) = \mathbf{E_r} … \mathbf{E_2} · \mathbf{E_1} \vec ψ(0) $$
+
+We contract from right to left, performing a sequence of matrix-vector calculations (each $O(N^2)$).
+Thus, the total runtime remains $O(rN^3)$.
+
+There is one more detail to mention, which is how $\mathbf{V_i}$ itself is computed prior to Julia's matrix exponentiation.
+Recall that $\mathbf{V_i}$ is a matrix representation of the interaction-picture Hamiltonian:
+
+$$ \hat V_I(t) ≡ e^{it \hat H_0} \hat V(t) e^{-it \hat H_0} $$
+
+When working in the _device basis_, where each amplitude in $\vec ψ$ corresponds to an eigenvector of $\hat H_0$,
+  the conjugating factor $e^{it \hat H_0}$ is diagonal; it's really just all the eigenvalues of $\hat H_0$ mulitiplied by $it$.
+Therefore, once you have a matrix representation of $\hat V(t)$,
+  obtaining $\mathbf{V_i}$ is very efficient: you just mulitply each element by an easily-determined phase factor.
+_However_, if we are in the device basis, constructing the matrix representation of $\hat V(t)$ is not so easy.
+The most efficient strategy seems to be to retain in memory an $N×N$ matrix representation of each $\hat a_q$ in the device-basis.
+Then the matrix representation of
+
+$$ \hat V(t) = \sum_q Ω_q (e^{iν_q t} \hat a_q + e^{-iν_q t} \hat a_q^†) $$
+
+is just a simple matrix sum over $O(n)$ $N×N$ operators.
+Thus, obtaining each $\mathbf{V_i}$ is an $O(nN^2)$ operation.
+While there may be a more efficient construction of $\hat V(t)$ in the qubit basis,
+  the conjugation would then require at least one $O(N^3)$ matrix multiplication step,
+  so this is probably the best implementation for this particular evolution method.
+
+Each $\mathbf{E_i}$ can be treated successively so memory requirements can in principle be bounded by $O(N^2)$.
+However, maintaining each $\hat a_q$ in memory increases this to $O(nN^2)$.
+
+
+#### 'Lanczos'
+
+This method is almost entirely identical to `Direct`, except that it avoids calculating the matrix exponential $\mathbf{E_i}$ explicitly.
+Instead, a "Lanczos" scheme is used to construct a "Krylov" sub-space of the generating matrix $\mathbf{V_i}$,
+  and this Krylov subspace is used to compute the action of the matrix exponential $\mathbf{E_i}$ on $\vec ψ$ directly.
+
+I'm not very familiar with the Lanczos scheme _or_ the Krylov subspace, but from what I understand,
+  the runtime of a proper implementation _should_ be bounded by $O(rN^2)$, but with a very steep overhead.
+Memory requirements are probably also a very steep overhead,
+  but should scale asymptotically as $O(N^2)$, just as in `Direct`.
