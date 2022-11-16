@@ -29,7 +29,12 @@ abstract type QubitApplyMode end
 struct Kronec <: QubitApplyMode end
 struct Tensor <: QubitApplyMode end
 
+#= TODO: Most "Number" types should be "Real" or "Complex"
+    ...don't permit flexibility...
+    If it really should be able to take both, it should have a second method.
+=#
 
+#= TODO: Match notation in notebook. HIC→V, V→L, expHIC→E, etc. =#
 
 """
     evolve(ψI, args...; kwargs...)
@@ -154,6 +159,11 @@ function evolve!(
     ΛD = nothing,                   # EIGENVALUES OF STATIC HAMILTONIAN
     UD = nothing,                   # CORRESPONDING EIGENVECTORS
     a_ = nothing,                   # LIST OF ANNIHILATION OPERATORS, IN STATIC BASIS
+
+    # PRE-ALLOCATIONS (for those that want every last drop of efficiency...)
+    HC = Matrix{ComplexF64}(undef, N,N),            # CONTROL HAMILTONIAN
+    expD = Vector{ComplexF64}(undef, N),            # DEVICE ACTION
+    HIC = Matrix{ComplexF64}(undef, N,N),           # INTERACTION PICTURE HAMILTONIAN
 )
     ######################################################################################
     #                            PRELIMINARY CALCULATIONS
@@ -171,23 +181,31 @@ function evolve!(
     ######################################################################################
     #                       DEFINE AND SOLVE DIFFERENTIAL EQUATIONS
 
-    # DEFINE THE INTERACTION-PICTURE HAMILTONIAN FOR A GIVEN TIME
+    """
+        interaction!(du, u, p, t)
+
+    Define Schrodinger's equation in the interaction picture.
+
+    `p` is a tuple of parameters, which we are using for pre-allocations.
+    - `p[1]` is pre-allocated N×N matrix, for control hamiltonian
+    - `p[2]` is pre-allocated N-Diagonal matrix, for device action
+    - `p[3]` is pre-allocated N×N matrix, for interaction picture hamiltonian
+    """
     function interaction!(du, u, p, t)
         # CONSTRUCT CONTROL HAMILTONIAN (IN DEVICE BASIS)
-        HC = zeros(N,N)
+        HC .= zeros(N,N)
         for q ∈ 1:n
             Ω = Pulses.amplitude(pulses[q], t)
             ν = Pulses.frequency(pulses[q], t)
             z = Ω * exp(im*ν*t)
-            HC += z*a_[q] + z'*a_[q]'
+            HC .+= z*a_[q] + z'*a_[q]'
         end
 
         # CONJUGATE WITH ACTION OF (DIAGONALIZED) DEVICE HAMILTONIAN
-        expD = Diagonal(exp.((im*t) * ΛD))  # DEVICE ACTION
-        HIC = expD * HC * expD'     # INTERACTION-PICTURE CONTROL HAMILTONIAN
+        expD .= exp.((im*t) * ΛD)                       # DEVICE ACTION
+        HIC .= Diagonal(expD) * HC * Diagonal(expD)'    # INTERACTION PICTURE HAMILTONIAN
 
-        # TODO: pre-allocate HC, expD, and HIC into p, perhaps?
-
+        # SCHRODINGER'S EQUATION
         du .= -im * HIC * u
     end
 
@@ -998,18 +1016,13 @@ function _applyqubitoperators!(
         )
         # ψ HAS ALREADY BEEN UPDATED, IN MUTATIONS OF ψ_
 
-        #= TODO: Proper benchmarking to understand if caching is useful.
-            It obviously helps over repeated trials in @btime; that's not fair.
-            It *probably* helps over repeated contractions over many time steps,
-                so it's surely worth having.
-            But I'd like to understand how it works better before I permit it.
-                Does it speed allocations *within* a single contraction?
-        =#
-
     ######################################################################################
     else
         error("Invalid `QubitApplyMode` object. (How did you manage that???)")
     end
+
+    #= TODO: try caching again after sorting out pre-allocations and type stability
+            presently it reduces memory somewhat and nothing else. =#
 end
 
 end # END MODULE

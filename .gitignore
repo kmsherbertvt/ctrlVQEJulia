@@ -1,4 +1,4 @@
-.vscode/*
-docs/build/*
-deprecated/*
+.vscode/
+docs/build/
+deprecated/
 script/_*
