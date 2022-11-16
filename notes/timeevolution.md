@@ -199,7 +199,7 @@ $$ \vec ψ(t) = e^{ -i Δt \mathbf{V_r} } … e^{ -i Δt \mathbf{V_2} } · e^{ -
 Each of these matrix exponentials is individually calculated, using Julia's default matrix exponentiation.
 _Assuming_ Julia is implemented the way _I_ would have implemented it, it is equivalent to the following:
 
-- For each time point $t$, diagonalize $\mathbf{V_i} = \mathbf{U_{V_i}} · \mathbf{Λ_{V_i}} · \mathbf{U_{V_i}}^†$,
+- For each time point $t$, diagonalize $\mathbf{V_i} = \mathbf{U_{V_i}} · \mathbf{Λ_{V_i}} · \mathbf{U_{V_i}^†}$,
     where $\mathbf{U_{V_i}}$ is a unitary matrix of eigenvectors and $\mathbf{Λ_{V_i}}$ is a diagonal matrix of eigenvalues.
   This step is the bottleneck, costing $O(N^3)$ runtime.
 - Next, calculate $e^{-iΔt\mathbf{Λ_{V_i}}}$.
@@ -207,7 +207,7 @@ _Assuming_ Julia is implemented the way _I_ would have implemented it, it is equ
   Because $\mathbf{Λ_{V_i}}$ is diagonal, this step costs only $O(N)$ runtime.
 - Finally, return to the original basis by conjugating with $\mathbf{U_{V_i}}$, which involves an $O(N^3)$ matrix multiplication:
 
-$$ \mathbf{E_i} = \mathbf{U_{V_i}} · e^{-iΔt\mathbf{Λ_{V_i}}} · \mathbf{U_{V_i}}^† $$
+$$ \mathbf{E_i} = \mathbf{U_{V_i}} · e^{-iΔt\mathbf{Λ_{V_i}}} · \mathbf{U_{V_i}^†} $$
 
 We have so far accumulated a total runtime of $O(rN^3)$ and the following formula:
 
@@ -226,14 +226,14 @@ When working in the _device basis_, where each amplitude in $\vec ψ$ correspond
 Therefore, once you have a matrix representation of $\hat V(t)$,
   obtaining $\mathbf{V_i}$ is very efficient: you just mulitply each element by an easily-determined phase factor.
 _However_, if we are in the device basis, constructing the matrix representation of $\hat V(t)$ is not so easy.
-The most efficient strategy seems to be to retain in memory an $N×N$ matrix representation of each $\hat a_q$ in the device-basis.
-Then the matrix representation of
+The most efficient strategy seems to be to retain in memory an $N×N$ matrix representation $\mathbf{a_q}$ of each $\hat a_q$ in the device-basis.
+Then the matrix representation of $\hat V(t)$ is $\sum_q \mathbf{V^{(q)}}$, where
 
-$$ \hat V(t) = \sum_q Ω_q (e^{iν_q t} \hat a_q + e^{-iν_q t} \hat a_q^†) $$
+$$ \mathbf{V^{(q)}} = Ω_q (e^{iν_q t} \mathbf{a_q} + e^{-iν_q t} \mathbf{a_q^†}) $$
 
-is just a simple matrix sum over $O(n)$ $N×N$ operators.
+is just a simple matrix sum over $N×N$ operators.
 Thus, obtaining each $\mathbf{V_i}$ is an $O(nN^2)$ operation.
-While there may be a more efficient construction of $\hat V(t)$ in the qubit basis,
+While there may be a more efficient construction of $\hat V(t)$ in the qubit basis (see the `Rotate` method!),
   the conjugation would then require at least one $O(N^3)$ matrix multiplication step,
   so this is probably the best implementation for this particular evolution method.
 
@@ -252,3 +252,184 @@ I'm not very familiar with the Lanczos scheme _or_ the Krylov subspace, but from
 Memory requirements are probably also a very steep overhead,
   but should scale asymptotically as $O(nN^2)$, just as in `Direct`.
 The studious reader can research the method used [here](https://jutho.github.io/KrylovKit.jl/stable/man/matfun/#KrylovKit.exponentiate).
+
+#### `Rotate`
+
+`Rotate` indicates "Rotating back and forth between the device and drive bases at each time step".
+It is a Trotterized method, but I don't want to work in matrix representation just yet:
+
+$$ |ψ(t)⟩ = e^{ -i Δt \hat V_I(t_r) } … e^{ -i Δt \hat V_I(t_2) } · e^{ -i Δt \hat V_I(t_1) } |ψ(0)⟩ $$
+
+but we will break each time step into device and drive components.
+It will turn out that the device components can be treated entirely _independent_ of time, and the drive components can be treated _qubit-wise_,
+  significantly reducing the number and size of computations.
+
+Recall that the interaction picture Hamiltonian is
+
+$$ \hat V_I(t_i) ≡ e^{it_i \hat H_0} \hat V(t_i) e^{-it_i \hat H_0} $$
+
+Conjugation by the unitary $e^{it_i \hat H_0}$ is in essence representing the drive Hamiltonian $\hat V(t_i)$ in an alternate, time-dependent basis.
+Substituting this into our Trotterized time evolution, the conjugating terms (because they are unitary) can pass _out_ of the enveloping exponential:
+
+$$\begin{array}{rl}
+  |ψ(t)⟩ &= \exp\left\[ e^{it_r \hat H_0} (-iΔt\hat V(t_r)) e^{-it_r \hat H_0}\right\] … \exp\left\[ e^{it_2 \hat H_0} (-iΔt\hat V(t_2)) e^{-it_2 \hat H_0}\right\] · \exp\left\[ e^{it_1 \hat H_0} (-iΔt\hat V(t_1)) e^{-it_1 \hat H_0}\right\] |ψ(0)⟩ \\
+         &= e^{it_r \hat H_0} · \exp\left\[ -i Δt \hat V(t_r) \right\] · \left( e^{-it_r \hat H_0} · e^{it_{r-1} \hat H_0} \right) · \exp\left\[ -i Δt \hat V(t_{r-1}) \right\] … \exp\left\[ -i Δt \hat V(t_2) \right\] · \left( e^{-it_2 \hat H_0} · e^{it_1 \hat H_0} \right) · \exp\left\[ -i Δt \hat V(t_1) \right\] · e^{-it_1 \hat H_0} |ψ(0)⟩ \\
+         &= e^{it_r \hat H_0} · \exp\left\[ -i Δt \hat V(t_r) \right\] · e^{-i(t_r - t_{r-1}) \hat H_0} · \exp\left\[ -i Δt \hat V(t_{r-1}) \right\] … \exp\left\[ -i Δt \hat V(t_2) \right\] · e^{-i(t_2 - t_1) \hat H_0} · \exp\left\[ -i Δt \hat V(t_1) \right\] · e^{-it_1 \hat H_0} |ψ(0)⟩ \\
+         &= e^{it_r \hat H_0} · \exp\left\[ -i Δt \hat V(t_r) \right\] · e^{-iΔt \hat H_0} · \exp\left\[ -i Δt \hat V(t_{r-1}) \right\] … \exp\left\[ -i Δt \hat V(t_2) \right\] · e^{-iΔt \hat H_0} · \exp\left\[ -i Δt \hat V(t_1) \right\] · e^{-it_1 \hat H_0} |ψ(0)⟩
+\end{array}$$
+
+Aside from the very first and last time steps, the device Hamiltonian $H_0$ is always treated with the same "ligand" operator $e^{-iΔt \hat H_0}$.
+Let $\mathbf{H_0}$ be the matrix representation of our device Hamiltonian in the _qubit basis_.
+The matrix exponential, as described in the `Direct` method, is computed via the following steps:
+- Diagonalize $\mathbf{H_0} = \mathbf{U_0} · \mathbf{Λ_0} · \mathbf{U_0^†}$,
+    where $\mathbf{U_0}$ is a unitary matrix of eigenvectors and $\mathbf{Λ_0}$ is a diagonal matrix of eigenvalues.
+  This step is the bottleneck, costing $O(N^3)$ runtime.
+- Next, calculate $e^{-iΔt\mathbf{Λ_0}}$.
+  This is in fact the ligand operator computed in the in the _device basis_.
+  Because $\mathbf{Λ_0}$ is diagonal, this step costs only $O(N)$ runtime.
+- Finally, rotate back to the qubit basis by conjugating with $\mathbf{U_0}$.
+
+$$ \mathbf{L_0} = \mathbf{U_0} · e^{-iΔt\mathbf{Λ_0}} · \mathbf{U_0^†} $$
+
+Like in the `Direct` method, calculating this matrix exponential has a runtime of $O(N^3)$.
+_Unlike_ the `Direct` method, this is the _only_ time we need to perform an $O(N^3)$ operation!
+
+We also need to evolve $H_0$ for the first and last points.
+But in the trapezoidal rule, the first time point is actually when $t=0$, so that operator is actually just identity.
+For the last time point ( $t=T$ ), we can re-use the same factorization $\mathbf{H_0} = \mathbf{U_0} · \mathbf{Λ_0} · \mathbf{U_0}^†$.
+Therefore, after applying the last drive, we apply the matrix $\mathbf{U_0}^†$ to rotate back to the device basis ( $O(N^2)$ ),
+  then we apply the final exponential $e^{iT \mathbf{Λ_0}}$, which has only $O(N)$ runtime.
+Now we already _have_ our final statevector in the device basis, but we can choose to apply $\mathbf{U_0}$ to rotate back to the qubit basis.
+
+Now let's look more closely at the drive Hamiltonian.
+
+$$ \hat V(t_i) = \sum_q Ω_q (e^{iν_q t_i} \hat a_q + e^{-iν_q t_i} \hat a_q^†) $$
+
+Since we're in the qubit basis, it makes sense to represent each annihilation operator $\hat a_q$ with just the one $m×m$ operator $\mathbf{a}$.
+Then our qubit-wise drive Hamiltonian is represented by:
+
+$$ \mathbf{V^{(q)}}(t_i) = Ω_q (e^{iν_q t} \mathbf{a} + e^{-iν_q t} \mathbf{a^†}) $$
+
+Let $\mathbf{D^{(q)}}(t_i)$ be the matrix exponential $e^{-iΔt \mathbf{V^{(q)}}(t_i)}$.
+The full-body operator $e^{-i Δt \hat V(t_i)}$ is therefore representable as the matrix product operator $\mathbf{D}(t_i)$:
+
+$$ e^{-i Δt \hat V} → \mathbf{D} ≡ \mathbf{D^{(q)}} ⊗ … \mathbf{D^{(2)}} ⊗ \mathbf{D^{(1)}} $$
+
+Now we are left with two questions:
+1. How do we apply the matrix product operator $\mathbf{D}(t_i)$ to the statevector $\vec ψ$?
+2. How do we calculate each $m×m$ matrix exponential $\mathbf{D^{(q)}}$?
+
+Each of these questions is answered in multiple ways in the code, and is therefore worthy of its own subsection.
+
+##### Applying the matrix product operator $\mathbf{D}(t)$ to the statevector $\vec ψ$
+The conceptually-easiest approach is to apply the Kronecker product directly to calculate an $N×N$ matrix,
+  which has a runtime of $O(nN^2)$,
+  and then apply this matrix directly to $\vec ψ$, which has a runtime of $O(N^2)$.
+So far we've discussed applying the ligand matrix $\mathbf{L}$, which requires a runtime of $O(N^2)$ at each time step,
+  or $O(rN^2)$ overall assuming $\mathbf{L}$ is pre-computed.
+Applying $\mathbf{D}$ with this method increases the asymptotic complexity to $O(rnN^2)$.
+This is a significant improvement over the `Direct` method but it could be even better.
+
+The trickier-but-more-efficient approach is to reinterpret $\vec ψ$ as an $n$-body tensor $ψ_{i_n,…i_2,i_1}$,
+  then apply $\mathbf{D}$ with a tensor contraction:
+
+$$ \mathbf{D}ψ_{i_n,…i_2,i_1} = \mathbf{D_{i_n,j_n}^{(q)}} … \mathbf{D_{i_2,j_2}^{(2)}} \mathbf{D_{i_1,j_1}^{(1)}} ψ_{j_n,…j_2,j_1} $$
+
+In principle, this contraction can be computed with a runtime of $O(nN)$.
+As long as it is implemented well, this results in a runtime bounded by applying the ligand operator: $O(rN^2)$.
+This is, I think, as good as it gets, unless sparsity in $\mathbf{L}$ can be exploited.
+
+In the code, these two methods can be selected via the keyword argument `qubitapplymode`.
+
+##### Calculating the matrix exponential $\mathbf{D^{(q)}}(t)$
+The most straightforward approach, and the one taken by the `Rotate` method, is to directly exponentiate.
+As described in the `Direct` method, this _presumably_ involves diagonalizing $\mathbf{V^{(q)}}$, which has a runtime of $O(m^3)$.
+Repeating for each $q$ incurs a runtime of $O(nm^3)$ at each timestep,
+  negligible next to the $O(N^2)=O(m^{2n})$ runtime to apply the ligand operator $\mathbf{L}$.
+
+This is perfectly fine and it (spoilers) don't actually get better.
+But, committing to the idea of performing all diagonalizations just once during the whole algorithm, we could _try_ to improve it;
+  this is what the `Prediag` method does.
+
+Consider the diagonalization of $\mathbf{V^{(q)}}$.
+
+$$ \mathbf{V^{(q)}}(t) = \mathbf{U_q}(t) \mathbf{Λ_q}(t) \mathbf{U_q^†}(t) $$
+
+We'd really _like_ to be able to compute $\mathbf{D^{(q)}} = e^{-iΔt \mathbf{V^{(q_)}}}$ as $\mathbf{U_q} e^{-iΔt \mathbf{Λ_q}(t)} \mathbf{U_q^†}$,
+  where $\mathbf{U_q}$ is independent of time.
+The diagonal $\mathbf{Λ_q}(t)$ would presumably be calculable in $O(m)$ runtime, as would its matrix exponential,
+  and then conjugation with $\mathbf{U_q}$ would give $\mathbf{D^{(q)}}$ in just $O(m^2)$ time.
+The problem is that $\mathbf{U_q}$ is _not_ independent of time, and it takes $O(m^3)$ runtime to calculate it.
+(Again, it's not _actually_ a problem, but this section is trying to solve it anyways...)
+
+What if we diagonalized not $\mathbf{V^{q}}$, but each individual _term_ in $\mathbf{V^{q}}$?
+Then we can "Trotterize" to evaluate the matrix exponential.
+Perhaps this will remove time-dependence from the eigenvectors?
+
+Yes, it will work, but careful!
+We do not want to evaluate the matrix exponential of a matrix like $e^{-iz Δt \mathbf{a}}$, because $\mathbf{a}$ _is not Hermitian_.
+Moreover, $\mathbf{a}$ and $\mathbf{a^†}$ do not commute, so the $\mathbf{D^{(q)}}$ resulting from Trotterization will _not be unitary_:
+  our time evolution will not preserve the norm of the statevector, resulting in numerical instability.
+Therefore, we will re-cast our problem into a different pair of operators:
+
+$$\begin{array}{rl}
+  \hat Q &≡ \hat a + \hat a^† \\
+  \hat P &≡ i(\hat a - \hat a^†)
+\end{array}$$
+
+These operators are the so-called "canonical" operators,
+  which have a rich history in the development of both classical and quantum mechanics
+  ( $\hat Q$ is known as a "canonical coordinate" and $\hat P$ as its "canonical momentum").
+They are useful to us here and now because they are Hermitian.
+We will write their matrix representations (truncated to $m$ modes) as $\mathbf{Q}$ and $\mathbf{P}$,
+  their eigenvector matrices as $\mathbf{U_Q}$ and $\mathbf{U_P}$,
+  and the diagonal matrix of eigenvalues as $\mathbf{Λ}$ (they share the same eigenvalues!).
+
+Decomposing our qubit-wise drive Hamiltonian into a sum over _these_ operators:
+
+$$\begin{array}{rl}
+  \mathbf{V^{(q)}}(t) &= x_q(t) \mathbf{Q} + y_q(t) \mathbf{P} \\
+               x_q(t) &≡ \Re ( Ω_q e^{iν_q t} ) \\
+               y_q(t) &≡ \Im ( Ω_q e^{iν_q t} ) \\
+\mathbf{D^{(q)}}(t) &≡ e^{-iΔt \mathbf{V^{(q)}} } \\
+                    &= e^{-iΔt (x_q(t) \mathbf{Q} + y_q(t) \mathbf{P}) } \\
+                    &≈ e^{-i x_q(t) Δt \mathbf{Q}} · e^{-i y_q(t) Δt \mathbf{P}} \\
+                    &= \mathbf{U_Q} · e^{-i x_q(t) Δt \mathbf{Λ}} · \mathbf{U_Q^†} · \mathbf{U_P} · e^{-i y_q(t) Δt \mathbf{Λ}} · \mathbf{U_P^†}
+\end{array}$$
+
+Here is a formula which permits us to calculate $\mathbf{D^{(q)}}(t)$ using pre-diagonalized matrices!
+The _only_ trouble is that it seems to require at least two matrix-matrix multiplications at each time step, which have... $O(m^3)$ runtime.
+(I say at least two because $\mathbf{U_Q^†} · \mathbf{U_P}$ can be pre-computed,
+  and the diagonal factors are efficiently folded into an adjacent matrix.)
+Yeah, diagonalizing a matrix has the same asymptotic complexity as matrix multiplication.
+The direct exponentiation has a little overhead from requiring a matrix multiplication after solving the eigenvalue problem,
+  but since this formula itself requires _two_ matrix multiplications, that balances out...
+  
+Oh, but can't we do matrix-vector multiplications instead..?
+Alright, let's say you are using the efficient tensor contraction method to apply each of these matrix products one at a time.
+You have to apply at least three contractions, each being $O(N)$ (or really $O(nN)$ if doing each qubit in parallel; it doesn't change the analysis).
+So let's say that's $O(m^3+N)$ to do the matrix multiplication then contraction, or $O(N+N)$ to do more than one contraction.
+Doing mulitple contractions is preferable when $N < m^3$.
+Well, $N=m^n$.
+In other words, when working with qubit-wise matrices,
+  matrix-matrix multiplication is faster than matrix-vector multiplication except when $n=1$.
+In other words, there is no reason whatsoever to use the `Prediag` method over `Rotate`.
+
+One last note: the code permits a keyword argument `suzukiorder` which can be 0, 1, or 2.
+`suzukiorder=2` uses one of those higher-order product formulae I've alluded to a couple times;
+  we can definitely use it here because we're factoring operators corresponding to the same time; the time-ordering operator won't interfere.
+Personally I like `suzukiorder=2` a lot because it's simple, symmetric, and drops Trotter error by another degree ( $O(Δt^2)→O(Δt^3)$ ),
+  but the fact is since the Trotter time evolution has $O(Δt^2)$ error, it doesn't really make much difference.
+The `suzukiorder=0` option is, however, a bit more interesting.
+To be clear, there isn't any such thing as a 0-order product formula; this is just short-hand for a related technique:
+
+The product formula $e^{\hat A + \hat B}≈e^{\hat A}·e^{\hat B}$ is actually exact when the commutator $\[\hat A, \hat B\]$ is zero.
+More interestingly, the formula $e^{\hat A + \hat B}≈e^{\hat A}·e^{\hat B}·e^{-\[\hat A, \hat B\]/2}$ is exact when the commutator is _scalar_.
+This is in fact true of our canonical operators $\hat Q$ and $\hat P$: $\[\hat Q, \hat P\] = -2i$.
+So, simply including that commutator as an extra phase factor in the first-order product formula should be enough to make it exact!
+This is what `suzukiorder=0` does.
+To be clear, there's still no reason to bother since `Rotate` is just as exact and generally faster,
+  and anyways you still have Trotter error from the time evolution formula, but it's _neat_.
+
+Unfortunately, it turns out that, practically speaking, this _doesn't_ work, because, truncated to $m$ modes, the commutator $\[\mathbf{Q}, \mathbf{P}\]$ is _not quite_ scalar: it is a diagonal operator with $-2i$ in every entry except the _very last_ one.
+Presumably this method will approximately work for significantly larger $m$, but I reiterate one last time that there is no point. ;)
