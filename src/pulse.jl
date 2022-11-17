@@ -62,8 +62,8 @@ Times numerically equal to a breakpoint in `steptimes` are treated as after the 
 struct BasicSquarePulse <: PulseTemplate
     duration::Float64
     frequency::Float64
-    amplitudes::AbstractVector{Float64}
-    steptimes::AbstractVector{Float64}
+    amplitudes::Vector{Float64}
+    steptimes::Vector{Float64}
 
     # INNER CONSTRUCTOR: Validate lengths of `amplitudes` and `steptimes` vectors.
     BasicSquarePulse(duration, frequency, amplitudes, steptimes) = (

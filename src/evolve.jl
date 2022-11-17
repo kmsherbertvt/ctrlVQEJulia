@@ -36,6 +36,8 @@ struct Tensor <: QubitApplyMode end
 
 #= TODO: Match notation in notebook. HIC→V, V→L, expHIC→E, etc. =#
 
+#= TODO: I/O and QubitApply can be :symbols instead of types, I think. =#
+
 """
     evolve(ψI, args...; kwargs...)
 
@@ -242,7 +244,7 @@ end
         device::Devices.Device,
         ::Type{Direct};
         iobasis::IOBasisMode = DeviceBasis(),
-        numsteps::Int = 2000,
+        numsteps::Integer = 2000,
 
         # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
         N = length(ψ),                  # SIZE OF STATEVECTOR
@@ -274,7 +276,7 @@ function evolve!(
     device::Devices.Device,
     ::Type{Direct};
     iobasis::IOBasisMode = DeviceBasis(),
-    numsteps::Int = 2000,
+    numsteps::Integer = 2000,
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
     N = length(ψ),                  # SIZE OF STATEVECTOR
@@ -330,7 +332,7 @@ end
         device::Devices.Device,
         ::Type{Lanczos};
         iobasis::IOBasisMode = DeviceBasis(),
-        numsteps::Int = 2000,
+        numsteps::Integer = 2000,
 
         # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
         N = length(ψ),                  # SIZE OF STATEVECTOR
@@ -362,7 +364,7 @@ function evolve!(
     device::Devices.Device,
     ::Type{Lanczos};
     iobasis::IOBasisMode = DeviceBasis(),
-    numsteps::Int = 2000,
+    numsteps::Integer = 2000,
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
     N = length(ψ),                  # SIZE OF STATEVECTOR
@@ -461,7 +463,11 @@ function _interactionhamiltonian(
     HIC = expD * HC * expD'     # INTERACTION-PICTURE CONTROL HAMILTONIAN
 
     return Hermitian(HIC)
-    # TODO: pre-allocate HC and expD.
+    #= TODO: pre-allocate HC and expD.
+    Play around with it, but I fear more arguments may make funciton passing harder?
+        If so, the best strat might be to move this methods inside Direct and Lancoz.
+    If that turns out to be the case,
+        reconsider those inferred and preallocated keyword arguments! =#
 end
 
 
@@ -475,7 +481,7 @@ end
         device::Devices.Device,
         ::Type{Rotate};
         iobasis::IOBasisMode = DeviceBasis(),
-        numsteps::Int = 2000,
+        numsteps::Integer = 2000,
         qubitapplymode::QubitApplyMode = Kronec(),
 
         # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
@@ -526,7 +532,7 @@ function evolve!(
     device::Devices.Device,
     ::Type{Rotate};
     iobasis::IOBasisMode = DeviceBasis(),
-    numsteps::Int = 2000,
+    numsteps::Integer = 2000,
     qubitapplymode::QubitApplyMode = Kronec(),
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
@@ -673,9 +679,9 @@ end
         device::Devices.Device,
         ::Type{Prediag};
         iobasis::IOBasisMode = DeviceBasis(),
-        numsteps::Int = 2000,
+        numsteps::Integer = 2000,
         qubitapplymode::QubitApplyMode = Kronec(),
-        suzukiorder::Int = 2,
+        suzukiorder::Integer = 2,
 
         # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
         N = length(ψ),                      # SIZE OF STATEVECTOR
@@ -748,9 +754,9 @@ function evolve!(
     device::Devices.Device,
     ::Type{Prediag};
     iobasis::IOBasisMode = DeviceBasis(),
-    numsteps::Int = 2000,
+    numsteps::Integer = 2000,
     qubitapplymode::QubitApplyMode = Kronec(),
-    suzukiorder::Int = 2,
+    suzukiorder::Integer = 2,
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
     N = length(ψ),                      # SIZE OF STATEVECTOR
@@ -1021,7 +1027,7 @@ function _applyqubitoperators!(
         error("Invalid `QubitApplyMode` object. (How did you manage that???)")
     end
 
-    #= TODO: try caching again after sorting out pre-allocations and type stability
+    #= TODO: try caching again after sorting out pre-allocations and type stability,
             presently it reduces memory somewhat and nothing else. =#
 end
 

@@ -44,7 +44,7 @@ Let ``n``≡`length(device)`:
 
 TODO: learn how/when to work with sparse matrices
 """
-static_hamiltonian(device::Device, m::Int=2) = error("Not Implemented")
+static_hamiltonian(device::Device, m::Integer=2) = error("Not Implemented")
 
 
 
@@ -73,15 +73,15 @@ Device couplings are given as symmetric coupling constants between pairs of qubi
 """
 struct Transmon <: Device
     n::Int
-    ω::AbstractVector{Float64}
-    δ::AbstractVector{Float64}
-    gmap::AbstractDict{QubitCouple,Float64}
+    ω::Vector{Float64}
+    δ::Vector{Float64}
+    gmap::Dict{QubitCouple,Float64}
     # INNER CONSTRUCTOR: Truncate structures down to n qubits.
     function Transmon(
-        ω::AbstractVector{Float64},
-        δ::AbstractVector{Float64},
-        gmap::AbstractDict{QubitCouple,Float64}=Dict{QubitCouple,Float64}(),
-        n::Int=length(ω),
+        ω::Vector{Float64},
+        δ::Vector{Float64},
+        gmap::Dict{QubitCouple,Float64}=Dict{QubitCouple,Float64}(),
+        n::Integer=length(ω),
     )
         # TRUNCATE OFF UNUSED QUBITS FROM FREQUENCY/ANHARMONICITY LISTS
         ω = ω[1:n]
@@ -101,7 +101,7 @@ Use only a sub-section of a device.
 The `slice` vector indicates which qubits to use, and in what order.
 
 """
-function selectqubits(slice::AbstractVector{Int}, device::Transmon)
+function selectqubits(slice::AbstractVector{<:Integer}, device::Transmon)
     # CONSTRUCT PERMUTATION
     σ = zeros(Int, device.n)
     for q in eachindex(slice)
@@ -127,7 +127,7 @@ Constructs the transmon Hamiltonian
     + \\sum_{⟨pq⟩} g_{pq} (a_p^† a_q + a_q^\\dagger a_p)``.
 
 """
-function static_hamiltonian(device::Transmon, m::Int=2)
+function static_hamiltonian(device::Transmon, m::Integer=2)
     n = length(device)
     N = m ^ n
 
@@ -148,35 +148,6 @@ function static_hamiltonian(device::Transmon, m::Int=2)
 
     return Hermitian(H)
 end
-# function static_hamiltonian(device::Transmon, m::Int=2)
-#     n = length(device)
-#     N = m ^ n
-#
-#     a_ = Utils.a_matrix(m)
-#     aT = a_'
-#
-#     # TODO: Type ambiguity: add extra method to allow user to select?
-#     H = zeros(N,N)
-#
-#     for q ∈ 1:n
-#         a_q = Utils.on(a_,q,n)
-#         aTq = Utils.on(aT,q,n)
-#         H += device.ω[q]   * (aTq * a_q)        # RESONANCE  TERMS
-#         H -= device.δ[q]/2 * (aTq^2 * a_q^2)    # ANHARMONIC TERMS
-#     end
-#
-#     # COUPLING TERMS
-#     for (pair, g) ∈ device.gmap
-#         a_1 = Utils.on(a_,pair.q1,n)
-#         a_2 = Utils.on(a_,pair.q2,n)
-#         aT1 = Utils.on(aT,pair.q1,n)
-#         aT2 = Utils.on(aT,pair.q2,n)
-#
-#         H += g * (aT1 * a_2 + aT2 * a_1)
-#     end
-#
-#     return Hermitian(H)
-# end
 
 
 """ The default four-qubit device used in ctrlq.

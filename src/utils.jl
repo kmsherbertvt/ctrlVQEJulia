@@ -13,7 +13,7 @@ Matrix representation of the bosonic annihilation operator on a single qubit.
 Note that the matrix representation must be truncated to `m` levels.
 
 """
-function a_matrix(m::Int=2)
+function a_matrix(m::Integer=2)
     a = zeros((m,m))
     for i ∈ 1:m-1
         a[i,i+1] = √i               # BOSONIC ANNIHILATION OPERATOR
@@ -29,7 +29,7 @@ Expand the single-qubit matrix operator `op` to act on qubit `q` of `n` qubits.
 In other words, apply Kronecker-products such that identity `I` acts on the other qubits.
 
 """
-function on(op::Matrix{<:Number}, q::Int, n::Int)
+function on(op::Matrix{<:Number}, q::Integer, n::Integer)
     A = ones(1,1)                   # A 1x1 IDENTITY MATRIX
     I = one(op)                     # AN IDENTITY MATRIX MATCHING THE DIMENSIONS OF `op`
     for i ∈ 1:n
@@ -62,7 +62,7 @@ end
 Concatenate a repeated string of an operator with the Kronecker product.
 
 """
-function kron_concat(op::Matrix{<:Number}, n::Int)
+function kron_concat(op::Matrix{<:Number}, n::Integer)
     O = Matrix(I,1,1)
     for q ∈ 1:n
         O = kron(O, op)
