@@ -6,14 +6,14 @@ import LinearAlgebra: kron, I, eigen, Eigen, Hermitian, norm
 
 
 """
-    a_matrix(m::Integer=2)
+    a_matrix(m::Int=2)
 
 Matrix representation of the bosonic annihilation operator on a single qubit.
 
 Note that the matrix representation must be truncated to `m` levels.
 
 """
-function a_matrix(m::Integer=2)
+function a_matrix(m::Int=2)
     a = zeros((m,m))
     for i ∈ 1:m-1
         a[i,i+1] = √i               # BOSONIC ANNIHILATION OPERATOR
@@ -22,14 +22,14 @@ function a_matrix(m::Integer=2)
 end
 
 """
-    on(op::AbstractMatrix{<:Number}, q::Integer, n::Integer)
+    on(op::Matrix{<:Number}, q::Int, n::Int)
 
 Expand the single-qubit matrix operator `op` to act on qubit `q` of `n` qubits.
 
 In other words, apply Kronecker-products such that identity `I` acts on the other qubits.
 
 """
-function on(op::AbstractMatrix{<:Number}, q::Integer, n::Integer)
+function on(op::Matrix{<:Number}, q::Int, n::Int)
     A = ones(1,1)                   # A 1x1 IDENTITY MATRIX
     I = one(op)                     # AN IDENTITY MATRIX MATCHING THE DIMENSIONS OF `op`
     for i ∈ 1:n
@@ -39,12 +39,12 @@ function on(op::AbstractMatrix{<:Number}, q::Integer, n::Integer)
 end
 
 """
-    kron_concat(ops::AbstractVector{<:AbstractMatrix{<:Number}})
+    kron_concat(ops::AbstractVector{Matrix{<:Number}})
 
 Concatenate a sequence of operators with the Kronecker product.
 
 """
-function kron_concat(ops::AbstractVector{<:AbstractMatrix{<:Number}})
+function kron_concat(ops::AbstractVector{<:Matrix{<:Number}})
     O = Matrix(I,1,1)
     for q ∈ eachindex(ops)
         O = kron(O, ops[q])
@@ -57,12 +57,12 @@ function kron_concat(ops::AbstractVector{<:AbstractMatrix{<:Number}})
 end
 
 """
-    kron_concat(ops::AbstractMatrix{<:Number}, n::Integer)
+    kron_concat(op::Matrix{<:Number}, n::Int)
 
 Concatenate a repeated string of an operator with the Kronecker product.
 
 """
-function kron_concat(op::AbstractMatrix{<:Number}, n::Integer)
+function kron_concat(op::Matrix{<:Number}, n::Int)
     O = Matrix(I,1,1)
     for q ∈ 1:n
         O = kron(O, op)
@@ -78,10 +78,10 @@ end
 
 """
     algebra(
-        n::Integer,
-        m::Integer=2;
-        basis::Union{AbstractMatrix{<:Number},Nothing}=nothing,
-    )
+    n::Int,
+    m::Int=2;
+    basis::Union{Matrix{<:Number},Nothing}=nothing,
+)
 
 Construct a vector of annihilation operators acting on each of `n` `m`-level systems.
 
@@ -92,9 +92,9 @@ These matrices, in conjunction with their adjoints,
 
 """
 function algebra(
-    n::Integer,
-    m::Integer=2;
-    basis::Union{AbstractMatrix{<:Number},Nothing}=nothing,
+    n::Int,
+    m::Int=2;
+    basis::Union{Matrix{<:Number},Nothing}=nothing,
 )
     a_ = a_matrix(m)                        # SINGLE-QUBIT ANNIHILATION OPERATOR
     a = [on(a_, q, n) for q in 1:n]         # EACH OPERATOR, ACTING ON FULL HILBERT SPACE

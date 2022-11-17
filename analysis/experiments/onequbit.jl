@@ -17,10 +17,10 @@ module OneQubitSquarePulseExperiment
     import ..RandomConstructs
 
     struct Control <: Experiments.Control
-        T::Real                 # PULSE DURATION
-        ν::Real                 # PULSE FREQUENCY
-        Ω::Real                 # PULSE AMPLITUDE
-        ω::Real                 # QUBIT RESONANCE FREQUENCY
+        T::Float64                  # PULSE DURATION
+        ν::Float64                  # PULSE FREQUENCY
+        Ω::Float64                  # PULSE AMPLITUDE
+        ω::Float64                  # QUBIT RESONANCE FREQUENCY
     end
 
     struct Setup <: Experiments.Setup
@@ -37,7 +37,7 @@ module OneQubitSquarePulseExperiment
 
     struct Independent <: Experiments.Independent
         seed::Integer                   # RANDOM SEED USED TO GENERATE INITIAL STATE
-        numsteps::Integer               # NUMBER OF TROTTER STEPS
+        numsteps::Int                   # NUMBER OF TROTTER STEPS
     end
 
     function Experiments.mapindex(expmt::Control, i::Integer)
@@ -46,14 +46,14 @@ module OneQubitSquarePulseExperiment
     end
 
     struct Result <: Experiments.Result
-        ψI::AbstractVector{<:Number}        # INITIAL STATE
-        ψ0::AbstractVector{<:Number}        # ANALYTICAL SOLUTION
-        ψ_ODE::AbstractVector{<:Number}     # NUMERICALLY CALCULATED SOLUTIONS
-        ψ_Direct::AbstractVector{<:Number}              # ⋮
-        ψ_Lanczos::AbstractVector{<:Number}             # ⋮
-        ψ_Rotate::AbstractVector{<:Number}              # ⋮
-        ψ_Prediag_1::AbstractVector{<:Number}           # ⋮
-        ψ_Prediag_2::AbstractVector{<:Number}           # ⋮
+        ψI::Vector{ComplexF64}          # INITIAL STATE
+        ψ0::Vector{ComplexF64}          # ANALYTICAL SOLUTION
+        ψ_ODE::Vector{ComplexF64}       # NUMERICALLY CALCULATED SOLUTIONS
+        ψ_Direct::Vector{ComplexF64}            # ⋮
+        ψ_Lanczos::Vector{ComplexF64}           # ⋮
+        ψ_Rotate::Vector{ComplexF64}            # ⋮
+        ψ_Prediag_1::Vector{ComplexF64}         # ⋮
+        ψ_Prediag_2::Vector{ComplexF64}         # ⋮
     end
 
     function Experiments.runtrial(expmt::Control, setup::Setup, xvars::Independent)
@@ -76,13 +76,13 @@ module OneQubitSquarePulseExperiment
     end
 
     struct Dependent <: Experiments.Dependent
-        FI::Real                # FIDELITY   BETWEEN EXACT SOLUTION AND INITIAL STATE
-        F_ODE::Real             # FIDELITIES BETWEEN EXACT AND SIMULATED SOLUTIONS
-        F_Direct::Real                              #  ⋮
-        F_Lanczos::Real                             #  ⋮
-        F_Rotate::Real                              #  ⋮
-        F_Prediag_1::Real                           #  ⋮
-        F_Prediag_2::Real                           #  ⋮
+        FI::Float64             # FIDELITY   BETWEEN EXACT SOLUTION AND INITIAL STATE
+        F_ODE::Float64          # FIDELITIES BETWEEN EXACT AND SIMULATED SOLUTIONS
+        F_Direct::Float64                           #  ⋮
+        F_Lanczos::Float64                          #  ⋮
+        F_Rotate::Float64                           #  ⋮
+        F_Prediag_1::Float64                        #  ⋮
+        F_Prediag_2::Float64                        #  ⋮
     end
 
     function Experiments.synthesize(::Control, ::Setup, xvars::Independent, result::Result)
@@ -122,11 +122,11 @@ module OneQutritSquarePulseExperiment
     import ..RandomConstructs
 
     struct Control <: Experiments.Control
-        T::Real                 # PULSE DURATION
-        ν::Real                 # PULSE FREQUENCY
-        Ω::Real                 # PULSE AMPLITUDE
-        ω::Real                 # QUBIT RESONANCE FREQUENCY
-        δ::Real                 # QUBIT ANHARMONICITY
+        T::Float64                  # PULSE DURATION
+        ν::Float64                  # PULSE FREQUENCY
+        Ω::Float64                  # PULSE AMPLITUDE
+        ω::Float64                  # QUBIT RESONANCE FREQUENCY
+        δ::Float64                  # QUBIT ANHARMONICITY
     end
 
     struct Setup <: Experiments.Setup
@@ -143,7 +143,7 @@ module OneQutritSquarePulseExperiment
 
     struct Independent <: Experiments.Independent
         seed::Integer                   # RANDOM SEED USED TO GENERATE INITIAL STATE
-        numsteps::Integer               # NUMBER OF TROTTER STEPS
+        numsteps::Int                   # NUMBER OF TROTTER STEPS
     end
 
     function Experiments.mapindex(expmt::Control, i::Integer)
@@ -152,14 +152,14 @@ module OneQutritSquarePulseExperiment
     end
 
     struct Result <: Experiments.Result
-        ψI::AbstractVector{<:Number}        # INITIAL STATE
-        ψ0::AbstractVector{<:Number}        # ANALYTICAL SOLUTION
-        ψ_ODE::AbstractVector{<:Number}     # NUMERICALLY CALCULATED SOLUTIONS
-        ψ_Direct::AbstractVector{<:Number}              # ⋮
-        ψ_Lanczos::AbstractVector{<:Number}             # ⋮
-        ψ_Rotate::AbstractVector{<:Number}              # ⋮
-        ψ_Prediag_1::AbstractVector{<:Number}           # ⋮
-        ψ_Prediag_2::AbstractVector{<:Number}           # ⋮
+        ψI::Vector{ComplexF64}          # INITIAL STATE
+        ψ0::Vector{ComplexF64}          # ANALYTICAL SOLUTION
+        ψ_ODE::Vector{ComplexF64}       # NUMERICALLY CALCULATED SOLUTIONS
+        ψ_Direct::Vector{ComplexF64}            # ⋮
+        ψ_Lanczos::Vector{ComplexF64}           # ⋮
+        ψ_Rotate::Vector{ComplexF64}            # ⋮
+        ψ_Prediag_1::Vector{ComplexF64}         # ⋮
+        ψ_Prediag_2::Vector{ComplexF64}         # ⋮
     end
 
     function Experiments.runtrial(expmt::Control, setup::Setup, xvars::Independent)
@@ -183,13 +183,13 @@ module OneQutritSquarePulseExperiment
     end
 
     struct Dependent <: Experiments.Dependent
-        FI::Real                # FIDELITY   BETWEEN EXACT SOLUTION AND INITIAL STATE
-        F_ODE::Real             # FIDELITIES BETWEEN EXACT AND SIMULATED SOLUTIONS
-        F_Direct::Real                              #  ⋮
-        F_Lanczos::Real                             #  ⋮
-        F_Rotate::Real                              #  ⋮
-        F_Prediag_1::Real                           #  ⋮
-        F_Prediag_2::Real                           #  ⋮
+        FI::Float64             # FIDELITY   BETWEEN EXACT SOLUTION AND INITIAL STATE
+        F_ODE::Float64          # FIDELITIES BETWEEN EXACT AND SIMULATED SOLUTIONS
+        F_Direct::Float64                           #  ⋮
+        F_Lanczos::Float64                          #  ⋮
+        F_Rotate::Float64                           #  ⋮
+        F_Prediag_1::Float64                        #  ⋮
+        F_Prediag_2::Float64                        #  ⋮
     end
 
     function Experiments.synthesize(::Control, ::Setup, xvars::Independent, result::Result)

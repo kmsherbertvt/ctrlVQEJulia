@@ -53,7 +53,7 @@ end
 
 """
     evolve!(
-        ψ::AbstractVector{<:Number},
+        ψ::Vector{ComplexF64},
         pulses::AbstractVector{<:Pulses.PulseTemplate},
         device::Devices.Device;
         iobasis::IOBasisMode = DeviceBasis()
@@ -102,7 +102,7 @@ Study the method headers for each mode in the code for the requisite details.
 
 """
 evolve!(
-    ψ::AbstractVector{<:Number},
+    ψ::Vector{ComplexF64},
     pulses::AbstractVector{<:Pulses.PulseTemplate},
     device::Devices.Device;
     iobasis::IOBasisMode = DeviceBasis()
@@ -113,7 +113,7 @@ evolve!(
 
 """
     evolve!(
-        ψ::AbstractVector{<:Number},
+        ψ::Vector{ComplexF64},
         pulses::AbstractVector{<:Pulses.PulseTemplate},
         device::Devices.Device,
         ::Type{ODE};
@@ -143,7 +143,7 @@ I've no idea how its runtime scales with system size.
 
 """
 function evolve!(
-    ψ::AbstractVector{<:Number},
+    ψ::Vector{ComplexF64},
     pulses::AbstractVector{<:Pulses.PulseTemplate},
     device::Devices.Device,
     ::Type{ODE};
@@ -237,12 +237,12 @@ end
 
 """
     evolve!(
-        ψ::AbstractVector{<:Number},
+        ψ::Vector{ComplexF64},
         pulses::AbstractVector{<:Pulses.PulseTemplate},
         device::Devices.Device,
         ::Type{Direct};
         iobasis::IOBasisMode = DeviceBasis(),
-        numsteps::Integer = 2000,
+        numsteps::Int = 2000,
 
         # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
         N = length(ψ),                  # SIZE OF STATEVECTOR
@@ -269,12 +269,12 @@ Don't use it, except to illustrate how much better other methods are. ^_^
 
 """
 function evolve!(
-    ψ::AbstractVector{<:Number},
+    ψ::Vector{ComplexF64},
     pulses::AbstractVector{<:Pulses.PulseTemplate},
     device::Devices.Device,
     ::Type{Direct};
     iobasis::IOBasisMode = DeviceBasis(),
-    numsteps::Integer = 2000,
+    numsteps::Int = 2000,
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
     N = length(ψ),                  # SIZE OF STATEVECTOR
@@ -325,12 +325,12 @@ end
 
 """
     evolve!(
-        ψ::AbstractVector{<:Number},
+        ψ::Vector{ComplexF64},
         pulses::AbstractVector{<:Pulses.PulseTemplate},
         device::Devices.Device,
         ::Type{Lanczos};
         iobasis::IOBasisMode = DeviceBasis(),
-        numsteps::Integer = 2000,
+        numsteps::Int = 2000,
 
         # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
         N = length(ψ),                  # SIZE OF STATEVECTOR
@@ -357,12 +357,12 @@ Don't use it, except to illustrate how much better other methods are. ^_^
 
 """
 function evolve!(
-    ψ::AbstractVector{<:Number},
+    ψ::Vector{ComplexF64},
     pulses::AbstractVector{<:Pulses.PulseTemplate},
     device::Devices.Device,
     ::Type{Lanczos};
     iobasis::IOBasisMode = DeviceBasis(),
-    numsteps::Integer = 2000,
+    numsteps::Int = 2000,
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
     N = length(ψ),                  # SIZE OF STATEVECTOR
@@ -419,9 +419,9 @@ end
 """
     _interactionhamiltonian(
         pulses::AbstractVector{<:Pulses.PulseTemplate}, # PULSE TEMPLATES FOR EACH QUBIT
-        ΛD::AbstractVector{<:Number},                   # EIGENVALUES OF STATIC HAMILTONIAN
-        a_::AbstractVector{<:AbstractMatrix{<:Number}}  # LIST OF ROTATED ANNIHILATION OPS
-        t::Number;                                      # TIME POINT
+        ΛD::Vector{Float64},                            # EIGENVALUES OF STATIC HAMILTONIAN
+        a_::AbstractVector{Matrix{Float64}}             # LIST OF ROTATED ANNIHILATION OPS
+        t::Float64;                                     # TIME POINT
 
         # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
         N = length(ΛD),                                 # SIZE OF STATEVECTOR
@@ -439,9 +439,9 @@ Computationally, assume we're in the device basis so the conjugating factor is d
 """
 function _interactionhamiltonian(
     pulses::AbstractVector{<:Pulses.PulseTemplate}, # PULSE TEMPLATES FOR EACH QUBIT
-    ΛD::AbstractVector{<:Number},                   # NUMBER OF LEVELS ON EACH QUBIT
-    a_::AbstractVector{<:AbstractMatrix{<:Number}}, # LIST OF ROTATED ANNIHILATION OPS
-    t::Number;                                      # TIME POINT
+    ΛD::Vector{Float64},                            # NUMBER OF LEVELS ON EACH QUBIT
+    a_::AbstractVector{Matrix{Float64}},            # LIST OF ROTATED ANNIHILATION OPS
+    t::Float64;                                     # TIME POINT
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
     N = length(ΛD),                                 # SIZE OF STATEVECTOR
@@ -470,12 +470,12 @@ end
 
 """
     evolve!(
-        ψ::AbstractVector{<:Number},
+        ψ::Vector{ComplexF64},
         pulses::AbstractVector{<:Pulses.PulseTemplate},
         device::Devices.Device,
         ::Type{Rotate};
         iobasis::IOBasisMode = DeviceBasis(),
-        numsteps::Integer = 2000,
+        numsteps::Int = 2000,
         qubitapplymode::QubitApplyMode = Kronec(),
 
         # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
@@ -521,12 +521,12 @@ TODO: The horrible overhead on tensor algebra might just vanish by caching...
 
 """
 function evolve!(
-    ψ::AbstractVector{<:Number},
+    ψ::Vector{ComplexF64},
     pulses::AbstractVector{<:Pulses.PulseTemplate},
     device::Devices.Device,
     ::Type{Rotate};
     iobasis::IOBasisMode = DeviceBasis(),
-    numsteps::Integer = 2000,
+    numsteps::Int = 2000,
     qubitapplymode::QubitApplyMode = Kronec(),
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
@@ -600,9 +600,9 @@ end
 """
     _preparequbitdrives(
         pulses::AbstractVector{<:Pulses.PulseTemplate}, # PULSE TEMPLATES FOR EACH QUBIT
-        m::Integer,                                     # NUMBER OF LEVELS ON EACH QUBIT
-        t::Number,                                      # TIME POINT
-        Δt::Number;                                     # TIME TO THE NEXT TIME POINT
+        m::Int,                                         # NUMBER OF LEVELS ON EACH QUBIT
+        t::Float64,                                     # TIME POINT
+        Δt::Float64;                                    # TIME TO THE NEXT TIME POINT
 
         # INFERRED VALUES (relatively fast, but you can pass them in if you'd like)
         n = length(pulses),                             # NUMBER OF QUBITS
@@ -625,9 +625,9 @@ We may model the action of the pulse on a resonant system at time ``t``
 """
 function _preparequbitdrives(
     pulses::AbstractVector{<:Pulses.PulseTemplate}, # PULSE TEMPLATES FOR EACH QUBIT
-    m::Integer,                                     # NUMBER OF LEVELS ON EACH QUBIT
-    t::Number,                                      # TIME POINT
-    Δt::Number;                                     # TIME TO THE NEXT TIME POINT
+    m::Int,                                         # NUMBER OF LEVELS ON EACH QUBIT
+    t::Float64,                                     # TIME POINT
+    Δt::Float64;                                    # TIME TO THE NEXT TIME POINT
 
     # INFERRED VALUES (relatively fast, but you can pass them in if you'd like)
     n = length(pulses),                             # NUMBER OF QUBITS
@@ -668,14 +668,14 @@ end
 
 """
     evolve!(
-        ψ::AbstractVector{<:Number},
+        ψ::Vector{ComplexF64},
         pulses::AbstractVector{<:Pulses.PulseTemplate},
         device::Devices.Device,
         ::Type{Prediag};
         iobasis::IOBasisMode = DeviceBasis(),
-        numsteps::Integer = 2000,
+        numsteps::Int = 2000,
         qubitapplymode::QubitApplyMode = Kronec(),
-        suzukiorder::Integer = 2,
+        suzukiorder::Int = 2,
 
         # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
         N = length(ψ),                      # SIZE OF STATEVECTOR
@@ -743,14 +743,14 @@ The keyword argument `suzukiorder` controls the product formula
 
 """
 function evolve!(
-    ψ::AbstractVector{<:Number},
+    ψ::Vector{ComplexF64},
     pulses::AbstractVector{<:Pulses.PulseTemplate},
     device::Devices.Device,
     ::Type{Prediag};
     iobasis::IOBasisMode = DeviceBasis(),
-    numsteps::Integer = 2000,
+    numsteps::Int = 2000,
     qubitapplymode::QubitApplyMode = Kronec(),
-    suzukiorder::Integer = 2,
+    suzukiorder::Int = 2,
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
     N = length(ψ),                      # SIZE OF STATEVECTOR
@@ -851,9 +851,9 @@ end
 """
     _preparequbitdrives_productformula!(
         pulses::AbstractVector{<:Pulses.PulseTemplate}, # PULSE TEMPLATES FOR EACH QUBIT
-        m::Integer,                                     # NUMBER OF LEVELS ON EACH QUBIT
-        t::Number,                                      # TIME POINT
-        Δt::Number;                                     # TIME TO THE NEXT TIME POINT
+        m::Int,                                         # NUMBER OF LEVELS ON EACH QUBIT
+        t::Float64,                                     # TIME POINT
+        Δt::Float64;                                    # TIME TO THE NEXT TIME POINT
         suzukiorder = 2,                                # SUZUKI ORDER OF PRODUCT FORMULA
 
         # MANDATORY (*could* be calculated, but it doesn't seem worth the trouble...)
@@ -888,9 +888,9 @@ But, uh, we're not in that limit, so...it's just for fun... ^_^
 """
 function _preparequbitdrives_productformula(
     pulses::AbstractVector{<:Pulses.PulseTemplate}, # PULSE TEMPLATES FOR EACH QUBIT
-    m::Integer,                                     # NUMBER OF LEVELS ON EACH QUBIT
-    t::Number,                                      # TIME POINT
-    Δt::Number;                                     # TIME TO THE NEXT TIME POINT
+    m::Int,                                         # NUMBER OF LEVELS ON EACH QUBIT
+    t::Float64,                                     # TIME POINT
+    Δt::Float64;                                    # TIME TO THE NEXT TIME POINT
     suzukiorder = 2,                                # SUZUKI ORDER OF PRODUCT FORMULA
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
@@ -963,8 +963,8 @@ end
 
 """
     _applyqubitoperators!(
-        ψ::AbstractVector{<:Number},
-        O_::AbstractVector{<:AbstractMatrix{<:Number}},
+        ψ::Vector{ComplexF64},
+        O_::AbstractVector{Matrix{ComplexF64}},
         mode::QubitApplyMode;
 
         # INFERRED VALUES (relatively fast, but you can pass them in if you'd like)
@@ -989,8 +989,8 @@ TODO: The horrible overhead on tensor algebra might just vanish by caching...
 
 """
 function _applyqubitoperators!(
-    ψ::AbstractVector{<:Number},
-    O_::AbstractVector{<:AbstractMatrix{<:Number}},
+    ψ::Vector{ComplexF64},
+    O_::AbstractVector{Matrix{ComplexF64}},
     mode::QubitApplyMode;
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)

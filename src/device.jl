@@ -8,8 +8,8 @@ import ..Utils
 
 # AUXILIARY STRUCTURE TO FACILITATE REPRESENTATION OF QUBIT COUPLINGS
 struct QubitCouple
-    q1::Integer
-    q2::Integer
+    q1::Int
+    q2::Int
     # INNER CONSTRUCTOR: Constrain order so that `Qu...ple(q1,q2) == Qu...ple(q2,q1)`.
     QubitCouple(q1, q2) = q1 > q2 ? new(q2, q1) : new(q1, q2)
 end
@@ -34,7 +34,7 @@ Fetch the number of qubits in the device.
 Base.length(device::Device) = device.n
 
 """
-    static_hamiltonian(device::Device, m::Integer=2)
+    static_hamiltonian(device::Device, m::Int=2)
 
 Construct the matrix representation of the device's static (no pulses) Hamiltonian `H`.
 
@@ -44,17 +44,17 @@ Let ``n``≡`length(device)`:
 
 TODO: learn how/when to work with sparse matrices
 """
-static_hamiltonian(device::Device, m::Integer=2) = error("Not Implemented")
+static_hamiltonian(device::Device, m::Int=2) = error("Not Implemented")
 
 
 
 
 """
     Transmon(
-        ω::AbstractVector{<:Number},
-        δ::AbstractVector{<:Number},
-        gmap::AbstractDict{QubitCouple,<:Number},
-        n::Integer=length(ω),
+        ω::AbstractVector{Float64},
+        δ::AbstractVector{Float64},
+        gmap::AbstractDict{QubitCouple,Float64}=Dict{QubitCouple,Float64}(),
+        n::Int=length(ω),
     )
 
 A device using transmons as qubits (eg. superconducting quantum computers).
@@ -72,16 +72,16 @@ Device couplings are given as symmetric coupling constants between pairs of qubi
 
 """
 struct Transmon <: Device
-    n::Integer
-    ω::AbstractVector{<:Number}
-    δ::AbstractVector{<:Number}
-    gmap::AbstractDict{QubitCouple,<:Number}
+    n::Int
+    ω::AbstractVector{Float64}
+    δ::AbstractVector{Float64}
+    gmap::AbstractDict{QubitCouple,Float64}
     # INNER CONSTRUCTOR: Truncate structures down to n qubits.
     function Transmon(
-        ω::AbstractVector{<:Number},
-        δ::AbstractVector{<:Number},
-        gmap::AbstractDict{QubitCouple,<:Number}=Dict{QubitCouple,Number}(),
-        n::Integer=length(ω),
+        ω::AbstractVector{Float64},
+        δ::AbstractVector{Float64},
+        gmap::AbstractDict{QubitCouple,Float64}=Dict{QubitCouple,Float64}(),
+        n::Int=length(ω),
     )
         # TRUNCATE OFF UNUSED QUBITS FROM FREQUENCY/ANHARMONICITY LISTS
         ω = ω[1:n]
@@ -94,14 +94,14 @@ struct Transmon <: Device
 end
 
 """
-    selectqubits(slice::AbstractVector{<:Integer}, device::Transmon)
+    selectqubits(slice::AbstractVector{Int}, device::Transmon)
 
 Use only a sub-section of a device.
 
 The `slice` vector indicates which qubits to use, and in what order.
 
 """
-function selectqubits(slice::AbstractVector{<:Integer}, device::Transmon)
+function selectqubits(slice::AbstractVector{Int}, device::Transmon)
     # CONSTRUCT PERMUTATION
     σ = zeros(Int, device.n)
     for q in eachindex(slice)
@@ -109,7 +109,7 @@ function selectqubits(slice::AbstractVector{<:Integer}, device::Transmon)
     end
 
     # FILTER COUPLING MAP
-    gmap = Dict{QubitCouple,Number}(
+    gmap = Dict{QubitCouple,Float64}(
         QubitCouple(σ[pair.q1],σ[pair.q2]) => g     # RE-LABEL COUPLINGS BY ORDER IN SLICE
             for (pair, g) in device.gmap
             if all((σ[pair.q1],σ[pair.q2]) .!= 0)   # OMIT COUPLINGS ABSENT FROM SLICE
@@ -119,7 +119,7 @@ function selectqubits(slice::AbstractVector{<:Integer}, device::Transmon)
 end
 
 """
-    static_hamiltonian(device::Transmon, m::Integer)
+    static_hamiltonian(device::Transmon, m::Int=2)
 
 Constructs the transmon Hamiltonian
     ``\\sum_q ω_q a_q^† a_q
@@ -127,34 +127,56 @@ Constructs the transmon Hamiltonian
     + \\sum_{⟨pq⟩} g_{pq} (a_p^† a_q + a_q^\\dagger a_p)``.
 
 """
-function static_hamiltonian(device::Transmon, m::Integer=2)
+function static_hamiltonian(device::Transmon, m::Int=2)
     n = length(device)
     N = m ^ n
 
-    a_ = Utils.a_matrix(m)
-    aT = a_'
+    a_ = Utils.algebra(n, m)
 
-    H = zeros(N,N)
+    H = zeros(Float64, N,N)
 
     for q ∈ 1:n
-        a_q = Utils.on(a_,q,n)
-        aTq = Utils.on(aT,q,n)
-        H += device.ω[q]   * (aTq * a_q)        # RESONANCE  TERMS
-        H -= device.δ[q]/2 * (aTq^2 * a_q^2)    # ANHARMONIC TERMS
+        H += device.ω[q]   * (a_[q]'   * a_[q])     # RESONANCE  TERMS
+        H -= device.δ[q]/2 * (a_[q]'^2 * a_[q]^2)   # ANHARMONIC TERMS
     end
 
     # COUPLING TERMS
     for (pair, g) ∈ device.gmap
-        a_1 = Utils.on(a_,pair.q1,n)
-        a_2 = Utils.on(a_,pair.q2,n)
-        aT1 = Utils.on(aT,pair.q1,n)
-        aT2 = Utils.on(aT,pair.q2,n)
-
-        H += g * (aT1 * a_2 + aT2 * a_1)
+        term = g * a_[pair.q1]' * a_[pair.q2]
+        H += term + term'
     end
 
     return Hermitian(H)
 end
+# function static_hamiltonian(device::Transmon, m::Int=2)
+#     n = length(device)
+#     N = m ^ n
+#
+#     a_ = Utils.a_matrix(m)
+#     aT = a_'
+#
+#     # TODO: Type ambiguity: add extra method to allow user to select?
+#     H = zeros(N,N)
+#
+#     for q ∈ 1:n
+#         a_q = Utils.on(a_,q,n)
+#         aTq = Utils.on(aT,q,n)
+#         H += device.ω[q]   * (aTq * a_q)        # RESONANCE  TERMS
+#         H -= device.δ[q]/2 * (aTq^2 * a_q^2)    # ANHARMONIC TERMS
+#     end
+#
+#     # COUPLING TERMS
+#     for (pair, g) ∈ device.gmap
+#         a_1 = Utils.on(a_,pair.q1,n)
+#         a_2 = Utils.on(a_,pair.q2,n)
+#         aT1 = Utils.on(aT,pair.q1,n)
+#         aT2 = Utils.on(aT,pair.q2,n)
+#
+#         H += g * (aT1 * a_2 + aT2 * a_1)
+#     end
+#
+#     return Hermitian(H)
+# end
 
 
 """ The default four-qubit device used in ctrlq.

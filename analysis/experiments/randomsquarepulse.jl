@@ -26,26 +26,26 @@ module TrotterAccuracyExperiment
     import ..RandomConstructs
 
     struct Control <: Experiments.Control
-        n::Integer              # NUMBER OF QUBITS
-        m::Integer              # NUMBER OF LEVELS PER QUBIT
+        n::Int                  # NUMBER OF QUBITS
+        m::Int                  # NUMBER OF LEVELS PER QUBIT
         # PULSE PARAMETERS
         pulseseed::Integer      # RANDOM SEED USED TO GENERATE PULSE
-        T::Real                 # PULSE DURATION            (*NOT* RANDOMIZED)
-        ν::Real                 # MEAN PULSE FREQUENCY
-        Ω::Real                 # MAX PULSE AMPLITUDE
-        W::Integer              # MEAN # OF WINDOWS
-        σν::Union{Real,Nothing} # √(σ²) OF PULSE FREQUENCY
-        σΩ::Union{Real,Nothing} # RANDOMIZE AMPLITUDE?
-        σW::Union{Real,Nothing} # RANDOMIZE # OF WINDOWS?
+        T::Float64              # PULSE DURATION            (*NOT* RANDOMIZED)
+        ν::Float64              # MEAN PULSE FREQUENCY
+        Ω::Float64              # MAX PULSE AMPLITUDE
+        W::Int                  # MEAN # OF WINDOWS
+        σν::Union{Float64,Nothing}  # √(σ²) OF PULSE FREQUENCY
+        σΩ::Union{Float64,Nothing}  # RANDOMIZE AMPLITUDE?
+        σW::Union{Float64,Nothing}  # RANDOMIZE # OF WINDOWS?
         # DEVICE PARAMETERS
         deviceseed::Integer     # RANDOM SEED USED TO GENERATE DEVICE
-        ω::Real                 # MEAN RESONANCE FREQUENCY
-        δ::Real                 # MEAN ANHARMONICITY
-        g::Real                 # MEAN COUPLING STRENGTH
-        σC::Union{Real,Nothing} # PAIR-WISE CHANCE OF COUPLING (beyond linear)
-        σω::Union{Real,Nothing} # √(σ²) OF RESONANT FREQUENCIES
-        σδ::Union{Real,Nothing} # √(σ²) OF ANHARMONICITY
-        σg::Union{Real,Nothing} # √(σ²) OF COUPLING STRENGTH
+        ω::Float64              # MEAN RESONANCE FREQUENCY
+        δ::Float64              # MEAN ANHARMONICITY
+        g::Float64              # MEAN COUPLING STRENGTH
+        σC::Union{Float64,Nothing}  # PAIR-WISE CHANCE OF COUPLING (beyond linear)
+        σω::Union{Float64,Nothing}  # √(σ²) OF RESONANT FREQUENCIES
+        σδ::Union{Float64,Nothing}  # √(σ²) OF ANHARMONICITY
+        σg::Union{Float64,Nothing}  # √(σ²) OF COUPLING STRENGTH
     end
 
     """
@@ -87,7 +87,7 @@ module TrotterAccuracyExperiment
 
     struct Independent <: Experiments.Independent
         seed::Integer                   # RANDOM SEED USED TO GENERATE INITIAL STATE
-        numsteps::Integer               # NUMBER OF TROTTER STEPS
+        numsteps::Int                   # NUMBER OF TROTTER STEPS
     end
 
     function Experiments.mapindex(expmt::Control, i::Integer)
@@ -96,16 +96,16 @@ module TrotterAccuracyExperiment
     end
 
     struct Result <: Experiments.Result
-        ψI::AbstractVector{<:Number}        # INITIAL STATE
-        ψ0::AbstractVector{<:Number}        # ANALYTICAL SOLUTION
-        ψ_Direct::AbstractVector{<:Number}  # NUMERICALLY CALCULATED SOLUTIONS
-        ψ_Lanczos::AbstractVector{<:Number}             # ⋮
-        ψ_Rotate_K::AbstractVector{<:Number}            # ⋮
-        ψ_Prediag_1K::AbstractVector{<:Number}          # ⋮
-        ψ_Prediag_2K::AbstractVector{<:Number}          # ⋮
-        ψ_Rotate_T::AbstractVector{<:Number}            # ⋮
-        ψ_Prediag_1T::AbstractVector{<:Number}          # ⋮
-        ψ_Prediag_2T::AbstractVector{<:Number}          # ⋮
+        ψI::Vector{ComplexF64}          # INITIAL STATE
+        ψ0::Vector{ComplexF64}          # ANALYTICAL SOLUTION
+        ψ_Direct::Vector{ComplexF64}    # NUMERICALLY CALCULATED SOLUTIONS
+        ψ_Lanczos::Vector{ComplexF64}               # ⋮
+        ψ_Rotate_K::Vector{ComplexF64}              # ⋮
+        ψ_Prediag_1K::Vector{ComplexF64}            # ⋮
+        ψ_Prediag_2K::Vector{ComplexF64}            # ⋮
+        ψ_Rotate_T::Vector{ComplexF64}              # ⋮
+        ψ_Prediag_1T::Vector{ComplexF64}            # ⋮
+        ψ_Prediag_2T::Vector{ComplexF64}            # ⋮
     end
 
     function Experiments.runtrial(expmt::Control, setup::Setup, xvars::Independent)
@@ -138,15 +138,15 @@ module TrotterAccuracyExperiment
     end
 
     struct Dependent <: Experiments.Dependent
-        FI::Real                # FIDELITY   BETWEEN BLACK-BOX SOLUTION AND INITIAL STATE
-        F_Direct::Real          # FIDELITIES BETWEEN BLACK-BOX AND SIMULATED SOLUTIONS
-        F_Lanczos::Real                             #  ⋮
-        F_Rotate_K::Real                            #  ⋮
-        F_Prediag_1K::Real                          #  ⋮
-        F_Prediag_2K::Real                          #  ⋮
-        F_Rotate_T::Real                            #  ⋮
-        F_Prediag_1T::Real                          #  ⋮
-        F_Prediag_2T::Real                          #  ⋮
+        FI::Float64             # FIDELITY   BETWEEN BLACK-BOX SOLUTION AND INITIAL STATE
+        F_Direct::Float64       # FIDELITIES BETWEEN BLACK-BOX AND SIMULATED SOLUTIONS
+        F_Lanczos::Float64                          #  ⋮
+        F_Rotate_K::Float64                         #  ⋮
+        F_Prediag_1K::Float64                       #  ⋮
+        F_Prediag_2K::Float64                       #  ⋮
+        F_Rotate_T::Float64                         #  ⋮
+        F_Prediag_1T::Float64                       #  ⋮
+        F_Prediag_2T::Float64                       #  ⋮
     end
 
     function Experiments.synthesize(::Control, ::Setup, xvars::Independent, result::Result)
@@ -196,27 +196,27 @@ module BenchmarkExperiment
     import ..RandomConstructs
 
     struct Control <: Experiments.Control
-        numsteps::Integer       # NUMBER OF TROTTER STEPS FOR TIME EVOLUTION METHODS
+        numsteps::Int               # NUMBER OF TROTTER STEPS FOR TIME EVOLUTION METHODS
         # STATE PARAMETERS
-        stateseed::Integer      # RANDOM SEED USED TO GENERATE INITIAL STATE
+        stateseed::Integer          # RANDOM SEED USED TO GENERATE INITIAL STATE
         # PULSE PARAMETERS
-        pulseseed::Integer      # RANDOM SEED USED TO GENERATE PULSE
-        T::Real                 # PULSE DURATION            (*NOT* RANDOMIZED)
-        ν::Real                 # MEAN PULSE FREQUENCY
-        Ω::Real                 # MAX PULSE AMPLITUDE
-        W::Integer              # MEAN # OF WINDOWS
-        σν::Union{Real,Nothing} # √(σ²) OF PULSE FREQUENCY
-        σΩ::Union{Real,Nothing} # RANDOMIZE AMPLITUDE?
-        σW::Union{Real,Nothing} # RANDOMIZE # OF WINDOWS?
+        pulseseed::Integer          # RANDOM SEED USED TO GENERATE PULSE
+        T::Float64                  # PULSE DURATION            (*NOT* RANDOMIZED)
+        ν::Float64                  # MEAN PULSE FREQUENCY
+        Ω::Float64                  # MAX PULSE AMPLITUDE
+        W::Int                      # MEAN # OF WINDOWS
+        σν::Union{Float64,Nothing}  # √(σ²) OF PULSE FREQUENCY
+        σΩ::Union{Float64,Nothing}  # RANDOMIZE AMPLITUDE?
+        σW::Union{Float64,Nothing}  # RANDOMIZE # OF WINDOWS?
         # DEVICE PARAMETERS
-        deviceseed::Integer     # RANDOM SEED USED TO GENERATE DEVICE
-        ω::Real                 # MEAN RESONANCE FREQUENCY
-        δ::Real                 # MEAN ANHARMONICITY
-        g::Real                 # MEAN COUPLING STRENGTH
-        σC::Union{Real,Nothing} # PAIR-WISE CHANCE OF COUPLING (beyond linear)
-        σω::Union{Real,Nothing} # √(σ²) OF RESONANT FREQUENCIES
-        σδ::Union{Real,Nothing} # √(σ²) OF ANHARMONICITY
-        σg::Union{Real,Nothing} # √(σ²) OF COUPLING STRENGTH
+        deviceseed::Integer         # RANDOM SEED USED TO GENERATE DEVICE
+        ω::Float64                  # MEAN RESONANCE FREQUENCY
+        δ::Float64                  # MEAN ANHARMONICITY
+        g::Float64                  # MEAN COUPLING STRENGTH
+        σC::Union{Float64,Nothing}  # PAIR-WISE CHANCE OF COUPLING (beyond linear)
+        σω::Union{Float64,Nothing}  # √(σ²) OF RESONANT FREQUENCIES
+        σδ::Union{Float64,Nothing}  # √(σ²) OF ANHARMONICITY
+        σg::Union{Float64,Nothing}  # √(σ²) OF COUPLING STRENGTH
     end
 
     """
@@ -244,9 +244,9 @@ module BenchmarkExperiment
     end
 
     struct Independent <: Experiments.Independent
-        m::Integer                          # NUMBER OF STATES PER QUBIT
-        n::Integer                          # NUMBER OF QUBITS
-        mode::Integer                       # EVOLUTION MODE
+        m::Int                          # NUMBER OF STATES PER QUBIT
+        n::Int                          # NUMBER OF QUBITS
+        mode::Int                       # EVOLUTION MODE
     end
 
     function Experiments.mapindex(expmt::Control, i::Integer)
@@ -258,7 +258,7 @@ module BenchmarkExperiment
     struct Result <: Experiments.Result
         pulses::AbstractVector{<:Pulses.PulseTemplate}  # SINGLE-QUBIT PULSE
         device::Devices.Device                          # SINGLE-QUBIT DEVICE
-        ψI::AbstractVector{<:Number}                    # INITIAL STATE
+        ψI::Vector{ComplexF64}                          # INITIAL STATE
         benchmark::BenchmarkTools.Trial                 # BENCHMARK TRIAL
     end
 
@@ -336,10 +336,10 @@ module BenchmarkExperiment
     end
 
     struct Dependent <: Experiments.Dependent
-        time::Real          # MINIMUM EXECUTION TIME (ns)
-        gctime::Real        # MINIMUM COMPILATION TIME (ns)
-        memory::Integer     # MINIMUM MEMORY CONSUMPTION (bytes)
-        allocs::Integer     # MINIMUM NUMBER OF ALLOCATIONS
+        time::Float64           # MINIMUM EXECUTION TIME (ns)
+        gctime::Float64         # MINIMUM COMPILATION TIME (ns)
+        memory::Int             # MINIMUM MEMORY CONSUMPTION (bytes)
+        allocs::Int             # MINIMUM NUMBER OF ALLOCATIONS
     end
 
     function Experiments.synthesize(::Control, ::Setup, xvars::Independent, result::Result)
@@ -353,7 +353,7 @@ module BenchmarkExperiment
     end
 
     """ Convenience function to produce an index from a set of independent variables. """
-    function createindex(m::Integer, n::Integer, mode::Integer)
+    function createindex(m::Int, n::Int, mode::Int)
         return m + 10*n + 1000*mode
     end
 

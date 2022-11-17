@@ -17,15 +17,15 @@ module CtrlQExperiment
 
     struct Control <: Experiments.Control
         # PULSE PARAMETERS
-        T::Real                 # PULSE DURATION
-        ν::Real                 # PULSE FREQUENCY (ALL QUBITS)
-        Ω::Real                 # PULSE AMPLITUDE (ALL QUBITS)
+        T::Float64              # PULSE DURATION
+        ν::Float64              # PULSE FREQUENCY (ALL QUBITS)
+        Ω::Float64              # PULSE AMPLITUDE (ALL QUBITS)
         # DEVICE PARAMETERS
         deviceseed::Integer     # RANDOM SEED USED TO GENERATE DEVICE
     end
 
     struct Setup <: Experiments.Setup
-        ψI::AbstractVector{<:Number}                    # INITIAL STATE
+        ψI::Vector{ComplexF64}                          # INITIAL STATE
         pulses::AbstractVector{<:Pulses.PulseTemplate}  # JULIA PULSES
         device::Devices.Device                          # JULIA DEVICE
         HD                                              # DEVICE HAMILTONIAN
@@ -85,9 +85,9 @@ module CtrlQExperiment
     end
 
     struct Result <: Experiments.Result
-        ψ0::AbstractVector{<:Number}        # SOLUTION OBTAINED FROM NUMERICAL INTEGRATION
-        ψ_ctrlq::AbstractVector{<:Number}   # SOLUTION OBTAINED FROM CtrlQ code
-        ψ_julia::AbstractVector{<:Number}   # SOLUTION OBTAINED FROM Julia code
+        ψ0::Vector{ComplexF64}              # SOLUTION OBTAINED FROM NUMERICAL INTEGRATION
+        ψ_ctrlq::Vector{ComplexF64}         # SOLUTION OBTAINED FROM CtrlQ code
+        ψ_julia::Vector{ComplexF64}         # SOLUTION OBTAINED FROM Julia code
     end
 
     function Experiments.runtrial(expmt::Control, setup::Setup, xvars::Independent)
@@ -108,9 +108,9 @@ module CtrlQExperiment
     end
 
     struct Dependent <: Experiments.Dependent
-        FI::Real                # FIDELITY BETWEEN NUMERICAL INTEGRATION AND INITIAL STATE
-        F_ctrlq::Real           # CtrlQ FIDELITY
-        F_julia::Real           # Julia FIDELITY
+        FI::Float64             # FIDELITY BETWEEN NUMERICAL INTEGRATION AND INITIAL STATE
+        F_ctrlq::Float64        # CtrlQ FIDELITY
+        F_julia::Float64        # Julia FIDELITY
     end
 
     function Experiments.synthesize(::Control,

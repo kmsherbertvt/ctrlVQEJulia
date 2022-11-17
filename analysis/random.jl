@@ -19,12 +19,12 @@ import ..Pulses
 _Gamma(μ, σ) = Gamma((μ/σ)^2, σ^2/μ)
 
 """
-    randomstate([rng=GLOBAL_RNG,] N::Integer)
+    randomstate([rng=GLOBAL_RNG,] N::Int)
 
 Generate a random quantum state over N complex numbers.
 
 """
-function statevector(rng::AbstractRNG, N::Integer)
+function statevector(rng::AbstractRNG, N::Int)
     # UNIFORMLY SAMPLE COMPLEX NUMBERS IN QUADRANT 1
     ψ = rand(rng, ComplexF64, N)
 
@@ -45,10 +45,10 @@ statevector(N::Integer) = statevector(GLOBAL_RNG, N)
 
 function squarepulse(
     rng::AbstractRNG,   # RANDOM NUMBER GENERATOR
-    T::Number,          # MEAN DURATION             (Gamma distribution)
-    ν::Number,          # MEAN FREQUENCY            (Gamma distribution)
-    Ω::Number,          # MAXIMUM AMPLITUDE (+/-)   (Uniform distribution)
-    W::Integer=1;       # MEAN # OF TIME WINDOWS    (Poisson distribution)
+    T::Float64,         # MEAN DURATION             (Gamma distribution)
+    ν::Float64,         # MEAN FREQUENCY            (Gamma distribution)
+    Ω::Float64,         # MAXIMUM AMPLITUDE (+/-)   (Uniform distribution)
+    W::Int=1;           # MEAN # OF TIME WINDOWS    (Poisson distribution)
     σT=nothing,         # √(σ²) OF T (nothing -> T is fixed)
     σν=nothing,         # √(σ²) OF ν (nothing -> ν is fixed)
     σΩ=nothing,         # nothing -> Ω is fixed, anything else means uniformal sample
@@ -69,16 +69,16 @@ function squarepulse(
     return Pulses.BasicSquarePulse(T, ν, amplitudes, steptimes)
 end
 squarepulse(
-    T::Number, ν::Number, Ω::Number, W::Integer=1
+    T::Float64, ν::Float64, Ω::Float64, W::Int=1
 ) = squarepulse(GLOBAL_RNG, T, ν, Ω, W)
 
 
 function transmondevice(
     rng::AbstractRNG,   # RANDOM NUMBER GENERATOR
-    n::Integer,         # NUMBER OF QUBITS          (Poisson distribution)
-    ω::Number,          # MEAN RESONANT FREQUENCY   (Gamma distribution)
-    δ::Number,          # MEAN ANHARMONICITY        (Gamma distribution)
-    g::Number = 0;      # MEAN COUPLING STRENGTH    (Gamma distribution)
+    n::Int,             # NUMBER OF QUBITS          (Poisson distribution)
+    ω::Float64,         # MEAN RESONANT FREQUENCY   (Gamma distribution)
+    δ::Float64,         # MEAN ANHARMONICITY        (Gamma distribution)
+    g::Float64 = 0.0;   # MEAN COUPLING STRENGTH    (Gamma distribution)
     σC=nothing,         # PAIR-WISE CHANCE OF COUPLING (Bernoulli distribution)
                 # nothing -> linear coupling    Vector{QubitCouple} -> specified coupling
     σn=nothing,         # nothing -> n is fixed, anything else means Poisson sample
@@ -103,12 +103,12 @@ function transmondevice(
         end; end
     end
     g = rand(rng, _Gamma(g, σg), length(couplings))     # GENERATE COUPLING STRENGTHS
-    gmap = Dict{Devices.QubitCouple,Number}(couplings .=> g)    # ZIP INTO DICT
+    gmap = Dict{Devices.QubitCouple,Float64}(couplings .=> g)   # ZIP INTO DICT
 
     return Devices.Transmon(ω, δ, gmap)
 end
 transmondevice(
-    n::Integer, ω::Number, δ::Number, g::Number
+    n::Int, ω::Float64, δ::Float64, g::Float64 = 0.0
 ) = transmondevice(GLOBAL_RNG, n, ω, δ, g)
 
 end # END MODULE
