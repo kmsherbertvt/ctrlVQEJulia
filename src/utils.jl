@@ -39,39 +39,65 @@ function on(op::Matrix{<:Number}, q::Integer, n::Integer)
 end
 
 """
-    kron_concat(ops::AbstractVector{Matrix{<:Number}})
+    kron_concat!(
+        ops::AbstractVector{Matrix{T}},
+        [O_::AbstractVector{Matrix{T}},]
+    ) where T <: Number
 
 Concatenate a sequence of operators with the Kronecker product.
 
+If `O_` is provided, each successive pairwise kron operation
+    is written to a pre-allocated element of O_.
+
 """
+function kron_concat(
+    ops::AbstractVector{Matrix{T}},
+    O_::AbstractVector{Matrix{T}},
+) where T <: Number
+    O_[1] .= ops[1]
+    for q ∈ 2:length(ops)
+        kron!(O_[q], O_[q-1], ops[q])
+    end
+    return O_[end]
+end
+
 function kron_concat(ops::AbstractVector{<:Matrix{<:Number}})
     O = Matrix(I,1,1)
     for q ∈ eachindex(ops)
         O = kron(O, ops[q])
     end
     return O
-    #= TODO: Pre-allocate O, ...and each intermediate. :?
-        There *must* be an easy way to kron a sequence of matrices together...
-        Maybe reshaping O into a tensor..? Ironic...
-    =#
 end
 
 """
-    kron_concat(op::Matrix{<:Number}, n::Int)
+    kron_concat(
+        op::Matrix{T}, n::Integer,
+        [O_::AbstractVector{Matrix{T}},]
+    ) where T <: Number
 
 Concatenate a repeated string of an operator with the Kronecker product.
 
+If `O_` is provided, each successive pairwise kron operation
+    is written to a pre-allocated element of O_.
+
 """
+function kron_concat(
+    op::Matrix{T}, n::Integer,
+    O_::AbstractVector{Matrix{T}}
+) where T <: Number
+    O_[1] .= op
+    for q ∈ 2:n
+        kron!(O_[q], O_[q-1], op)
+    end
+    return O_[end]
+end
+
 function kron_concat(op::Matrix{<:Number}, n::Integer)
     O = Matrix(I,1,1)
     for q ∈ 1:n
         O = kron(O, op)
     end
     return O
-    #= TODO: Pre-allocate O, ...and each intermediate. :?
-        There *must* be an easy way to kron a sequence of matrices together...
-        Maybe reshaping O into a tensor..? Ironic...
-    =#
 end
 
 

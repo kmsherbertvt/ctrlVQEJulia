@@ -1,17 +1,17 @@
 #= Construct Trotter accuracy plots for increasing system sizes. =#
 
-rundata  = false
+rundata  = true
 plotdata = true
 
-filename = "benchmark.11_14_2022"
+filename = "benchmark.11_17_2022.external"
 modes = [
-    # 0,  # ODE
-    # 1,  # DIRECT
-    # 2,  # LANCZOS
-    # 3,  # ROTATE (Kronec)
-    # 5,  # PREDIAG (Kronec, order=1)
-    # 7,  # PREDIAG (Kronec, order=2)
+    0,  # ODE
+    1,  # DIRECT
+    2,  # LANCZOS
+    3,  # ROTATE (Kronec)
     4,  # ROTATE (Tensor)
+    5,  # PREDIAG (Kronec, order=1)
+    7,  # PREDIAG (Kronec, order=2)
     6,  # PREDIAG (Tensor, order=1)
     8,  # PREDIAG (Tensor, order=2)
 ]
@@ -33,20 +33,20 @@ if rundata
     import .Experiments
     import .BenchmarkExperiment
 
-    expmt = BenchmarkExperiment.Control()
+    expmt = BenchmarkExperiment.Control(numsteps=30)
 
     for mode in modes; for m in m_
         result = nothing
         n = 1
-        while true
+        while n <= 24 ÷ m
             # RUN SINGLE EXPERIMENT
             index = BenchmarkExperiment.createindex(m, n, mode)
             open("dat/$filename.csv", "a") do io
                 result = Experiments.collectdata(io, expmt, index)
             end
 
-            # TERMINATE AFTER FIRST TRIAL THAT TAKES OVER TEN SECONDS
-            if minimum(result.benchmark).time > 10.0e9; break; end
+            # TERMINATE AFTER FIRST TRIAL THAT TAKES OVER A SECOND
+            if minimum(result.benchmark).time > 1.0e9; break; end
 
             # UPDATE QUBIT COUNT
             n += 1
