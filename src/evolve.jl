@@ -36,18 +36,17 @@ struct Tensor <: QubitApplyMode end
 
 #= TODO: Structs should allow for alternate float precision. =#
 
-#= TODO: Match notation in notebook. HIC→V, V→L, expHIC→E, etc. =#
+#= TODO: Match notation in notebook. HIC→V, V→L, expHIC→E, etc.
+
+Also temp variables look awkward.
+Do something like `_` prefix to indicate it's an allocation,
+    then `1D` or `2D` for the vector vs. matrix distinction,
+    then `N` or `n` to indicate size,
+    then finally a `_` suffix to indicate array.
+`tmpK_` can change to something more innocuous like `_p_`
+=#
 
 #= TODO: I/O and QubitApply can be :symbols instead of types, I think. =#
-
-#= TODO: Somehow numsteps=100 induces 1e5 more bytes than numsteps=30,
-        irrespective(ish) of qubit count. What gives?
-    Could it be the internal method calls? Try external one more time.
-    This might actually be significant for longer runs; I'm not sure.
-
-    Okay I think it's actually like 400 bytes / time step.
-    I don't know where it comes from, but it's not that big a deal...
-=#
 
 """
     evolve(ψI, args...; kwargs...)
@@ -197,38 +196,6 @@ function evolve!(
     ######################################################################################
     #                       DEFINE AND SOLVE DIFFERENTIAL EQUATIONS
 
-    """
-        interaction!(du, u, p, t)
-
-    Define Schrodinger's equation in the interaction picture.
-
-    `p` is a tuple of parameters, which we are using for pre-allocations.
-    - `p[1]` is pre-allocated N×N matrix, for control hamiltonian
-    - `p[2]` is pre-allocated N-Diagonal matrix, for device action
-    - `p[3]` is pre-allocated N×N matrix, for interaction picture hamiltonian
-    """
-    function interaction!(du, u, p, t)
-        # CONSTRUCT CONTROL HAMILTONIAN (IN DEVICE BASIS)
-        tmpM .= zeros(N,N)
-        for q ∈ 1:n
-            Ω = Pulses.amplitude(pulses[q], t)
-            ν = Pulses.frequency(pulses[q], t)
-            z = Ω * exp(im*ν*t)
-
-            tmpM .+= z .* a_[q]     # ADD IN za terms
-        end
-        tmpM .+= tmpM'              # ADD IN z*a† terms
-
-        # CONSTRUCT INTERACTION PICTURE HAMILTONIAN
-        tmpV .= exp.((im*t) .* ΛD)                  # DEVICE ACTION
-        expD = Diagonal(tmpV)                           # CREATE A DIAGONAL-MATRIX VIEW
-        lmul!(expD, tmpM); rmul!(tmpM, expD')       # CONJUGATE WITH DEVICE ACTION
-
-        # SCHRODINGER'S EQUATION
-        lmul!(-im, tmpM)                            # ADD THE i FROM SCHRODINGER'S EQN
-        mul!(du, tmpM, u)                           # SET du = -i H_I u
-    end
-
     # SOLVE THE SYSTEM
     #= NOTE:
         This method autoselects an algorithm based on I have no idea what,
@@ -237,21 +204,55 @@ function evolve!(
         But, it works *pretty* well for the single-qubit case,
             so I'm willing to treat it as a sort of black-box standard.
     =#
-    schrodinger = ODEProblem(interaction!, ψ, (0.0, T))
+    p = (pulses, N, n, ΛD, a_, tmpM, tmpV)
+    schrodinger = ODEProblem(_interaction!, ψ, (0.0, T), p)
     solution = solve(schrodinger, save_everystep=false)     # TIME-CONSUMING STEP
 
     # WRITE FINAL SOLUTION TO THE GIVEN STATEVECTOR
     ψ .= solution.u[end]
 
     # RE-NORMALIZE THIS STATE
-    ψ .= ψ / norm(ψ)
+    ψ ./= norm(ψ)
 
     ######################################################################################
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
 
+""" Auxiliary function for Direct `evolve!`.
+Mutates derivative vector du with Schrodinger's interaction picture equation.
+p is a tuple of "parameters", actually just used to pass constants/preallocations.
+"""
+function _interaction!(du, u, p, t)
+    # UNPACK PARAMETERS
+    pulses  = p[1]
+    N       = p[2]
+    n       = p[3]
+    ΛD      = p[4]
+    a_      = p[5]
+    tmpM    = p[6]
+    tmpV    = p[7]
 
+    # CONSTRUCT CONTROL HAMILTONIAN (IN DEVICE BASIS)
+    tmpM .= zeros(N,N)
+    for q ∈ 1:n
+        Ω = Pulses.amplitude(pulses[q], t)
+        ν = Pulses.frequency(pulses[q], t)
+        z = Ω * exp(im*ν*t)
+
+        tmpM .+= z .* a_[q]     # ADD IN za terms
+    end
+    tmpM .+= tmpM'              # ADD IN z*a† terms
+
+    # CONSTRUCT INTERACTION PICTURE HAMILTONIAN
+    tmpV .= exp.((im*t) .* ΛD)                  # DEVICE ACTION
+    expD = Diagonal(tmpV)                           # CREATE A DIAGONAL-MATRIX VIEW
+    lmul!(expD, tmpM); rmul!(tmpM, expD')       # CONJUGATE WITH DEVICE ACTION
+
+    # SCHRODINGER'S EQUATION
+    lmul!(-im, tmpM)                            # ADD THE i FROM SCHRODINGER'S EQN
+    mul!(du, tmpM, u)                           # SET du = -i H_I u
+end
 
 
 
@@ -332,71 +333,70 @@ function evolve!(
     ######################################################################################
     #                                 TIME EVOLUTION
 
-    """
-        step(ψ, t, Δt)
-
-    Calculate the interaction picture hamiltonian in the device basis at time `t`,
-        and apply its time-evolution operator for `Δt`.
-
-    """
-    function step(ψ, t, Δt)
-        # CONSTRUCT CONTROL HAMILTONIAN (IN DEVICE BASIS)
-        tmpM .= zeros(N,N)
-        for q ∈ 1:n
-            Ω = Pulses.amplitude(pulses[q], t)
-            ν = Pulses.frequency(pulses[q], t)
-            z = Ω * exp(im*ν*t)
-
-            tmpM .+= z .* a_[q]     # ADD IN za terms
-        end
-        tmpM .+= tmpM'              # ADD IN z*a† terms
-
-        # CONSTRUCT INTERACTION PICTURE HAMILTONIAN
-        tmpV .= exp.((im*t) .* ΛD)                  # DEVICE ACTION
-        expD = Diagonal(tmpV)                           # CREATE A DIAGONAL-MATRIX VIEW
-        lmul!(expD, tmpM); rmul!(tmpM, expD')       # CONJUGATE WITH DEVICE ACTION
-
-        # PREPARE TIME-EVOLUTION OPERATOR
-        tmpM .= exp((-im*Δt).*tmpM)
-        #= NOTE: *THIS* step is the bottleneck,
-                    not only because it is algorithmically the most complex,
-                    but because it is the *ONLY* step inside the time loop
-                    that invokes any allocations at all.
-                 Interestingly, I think I can cut down those allocations by a factor of two
-                    by manually diagonalizing `tmpM`
-                    then doing in-place matrix multiplications.
-
-                 In fact, `exp` seems to be doing a different algorithm entirely,
-                    since...its argument is not _Hermitian_.
-                ...it's *anti*-Hermitian! That is dumb. Maybe worth filing an issue over.
-                 Anyways, the algorithm being used is called "squaring and scaling".
-                 I dunno how it works but it seems to be a bit slower,
-                    at least for the limited N=100 test I did in the REPL.
-                 The point is we can probably cut time in two by manually exponentiating.
-        =#
-
-        # APPLY TIME-EVOLUTION OPERATOR
-        mul!(tmpV, tmpM, ψ)
-        return tmpV
-    end
-
     # FIRST TIME STEP   (use Δt/2 for first and last time step)
-    ψ .= step(ψ, t_[1], Δt/2)
+    ψ .= _step(ψ, t_[1], Δt/2, Direct, pulses, N, n, ΛD, a_, tmpM, tmpV)
 
     for i ∈ 2:numsteps
-        ψ .= step(ψ, t_[i], Δt)
+        ψ .= _step(ψ, t_[i], Δt, Direct, pulses, N, n, ΛD, a_, tmpM, tmpV)
     end
 
     # LAST TIME STEP    (use Δt/2 for first and last time step)
-    ψ .= step(ψ, t_[end], Δt/2)
+    ψ .= _step(ψ, t_[end], Δt/2, Direct, pulses, N, n, ΛD, a_, tmpM, tmpV)
 
     ######################################################################################
 
     # RE-NORMALIZE THIS STATE
-    ψ .= ψ / norm(ψ)
+    ψ ./= norm(ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
+
+""" Auxiliary function for Direct `evolve!`. """
+function _step(ψ, t, Δt, ::Type{Direct}, pulses, N, n, ΛD, a_, tmpM, tmpV)
+    ######################################################################################
+    #                                 SINGLE TIME STEP
+
+    # CONSTRUCT CONTROL HAMILTONIAN (IN DEVICE BASIS)
+    tmpM .= zeros(N,N)
+    for q ∈ 1:n
+        Ω = Pulses.amplitude(pulses[q], t)
+        ν = Pulses.frequency(pulses[q], t)
+        z = Ω * exp(im*ν*t)
+
+        tmpM .+= z .* a_[q]     # ADD IN za terms
+    end
+    tmpM .+= tmpM'              # ADD IN z*a† terms
+
+    # CONSTRUCT INTERACTION PICTURE HAMILTONIAN
+    tmpV .= exp.((im*t) .* ΛD)                  # DEVICE ACTION
+    expD = Diagonal(tmpV)                           # CREATE A DIAGONAL-MATRIX VIEW
+    lmul!(expD, tmpM); rmul!(tmpM, expD')       # CONJUGATE WITH DEVICE ACTION
+
+    # PREPARE TIME-EVOLUTION OPERATOR
+    tmpM .= exp((-im*Δt).*tmpM)
+    #= NOTE: *THIS* step is the bottleneck,
+                not only because it is algorithmically the most complex,
+                but because it is the *ONLY* step inside the time loop
+                that invokes any allocations at all.
+                Interestingly, I think I can cut down those allocations by a factor of two
+                by manually diagonalizing `tmpM`
+                then doing in-place matrix multiplications.
+
+                In fact, `exp` seems to be doing a different algorithm entirely,
+                since...its argument is not _Hermitian_.
+            ...it's *anti*-Hermitian! That is dumb. Maybe worth filing an issue over.
+                Anyways, the algorithm being used is called "squaring and scaling".
+                I dunno how it works but it seems to be a bit slower,
+                at least for the limited N=100 test I did in the REPL.
+                The point is we can probably cut time in two by manually exponentiating.
+    =#
+
+    # APPLY TIME-EVOLUTION OPERATOR
+    mul!(tmpV, tmpM, ψ)
+    return tmpV
+end
+
+
 
 
 """
@@ -476,62 +476,61 @@ function evolve!(
     ######################################################################################
     #                                 TIME EVOLUTION
 
-    """
-        step(ψ, t, Δt)
-
-    Calculate the interaction picture hamiltonian in the device basis at time `t`,
-        and apply its time-evolution operator for `Δt`.
-
-    """
-    function step(ψ, t, Δt)
-        # CONSTRUCT CONTROL HAMILTONIAN (IN DEVICE BASIS)
-        tmpM .= zeros(N,N)
-        for q ∈ 1:n
-            Ω = Pulses.amplitude(pulses[q], t)
-            ν = Pulses.frequency(pulses[q], t)
-            z = Ω * exp(im*ν*t)
-
-            tmpM .+= z .* a_[q]     # ADD IN za terms
-        end
-        tmpM .+= tmpM'              # ADD IN z*a† terms
-
-        # CONSTRUCT INTERACTION PICTURE HAMILTONIAN
-        tmpV .= exp.((im*t) .* ΛD)                  # DEVICE ACTION
-        expD = Diagonal(tmpV)                           # CREATE A DIAGONAL-MATRIX VIEW
-        lmul!(expD, tmpM); rmul!(tmpM, expD')       # CONJUGATE WITH DEVICE ACTION
-
-        # APPLY TIME-EVOLUTION OPERATOR
-        tmpV = exponentiate(tmpM, -im*Δt, ψ)[1]
-        #= NOTE: *THIS* step is the bottleneck,
-                    not only because it is algorithmically the most complex,
-                    but because it is the *ONLY* step inside the time loop
-                    that invokes any allocations at all.
-        =#
-
-        return tmpV
-    end
-
     # FIRST TIME STEP   (use Δt/2 for first and last time step)
-    ψ .= step(ψ, t_[1], Δt/2)
+    ψ .= _step(ψ, t_[1], Δt/2, Lanczos, pulses, N, n, ΛD, a_, tmpM, tmpV)
 
     for i ∈ 2:numsteps
-        ψ .= step(ψ, t_[i], Δt)
+        ψ .= _step(ψ, t_[i], Δt, Lanczos, pulses, N, n, ΛD, a_, tmpM, tmpV)
     end
 
     # LAST TIME STEP    (use Δt/2 for first and last time step)
-    ψ .= step(ψ, t_[end], Δt/2)
+    ψ .= _step(ψ, t_[end], Δt/2, Lanczos, pulses, N, n, ΛD, a_, tmpM, tmpV)
 
     ######################################################################################
 
     # RE-NORMALIZE THIS STATE
-    ψ .= ψ / norm(ψ)
+    ψ ./= norm(ψ)
 
     #= TODO: We spent so long IN time loop that we forgot to optimize OUTSIDE.
-        ψ .= U * ψ -> ψ = mul!(tmpV, U, ψ);    ψ .= ψ / norm(ψ) -> ψ ./= norm(ψ)
+        ψ .= U * ψ -> ψ = mul!(tmpV, U, ψ); ψ .= tmpV
     =#
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
+
+
+""" Auxiliary function for Lanczos `evolve!`. """
+function _step(ψ, t, Δt, ::Type{Lanczos}, pulses, N, n, ΛD, a_, tmpM, tmpV)
+    ######################################################################################
+    #                                 SINGLE TIME STEP
+
+    # CONSTRUCT CONTROL HAMILTONIAN (IN DEVICE BASIS)
+    tmpM .= zeros(N,N)
+    for q ∈ 1:n
+        Ω = Pulses.amplitude(pulses[q], t)
+        ν = Pulses.frequency(pulses[q], t)
+        z = Ω * exp(im*ν*t)
+
+        tmpM .+= z .* a_[q]     # ADD IN za terms
+    end
+    tmpM .+= tmpM'              # ADD IN z*a† terms
+
+    # CONSTRUCT INTERACTION PICTURE HAMILTONIAN
+    tmpV .= exp.((im*t) .* ΛD)                  # DEVICE ACTION
+    expD = Diagonal(tmpV)                           # CREATE A DIAGONAL-MATRIX VIEW
+    lmul!(expD, tmpM); rmul!(tmpM, expD')       # CONJUGATE WITH DEVICE ACTION
+
+    # APPLY TIME-EVOLUTION OPERATOR
+    tmpV = exponentiate(tmpM, -im*Δt, ψ)[1]
+    #= NOTE: *THIS* step is the bottleneck,
+                not only because it is algorithmically the most complex,
+                but because it is the *ONLY* step inside the time loop
+                that invokes any allocations at all.
+    =#
+
+    return tmpV
+end
+
 
 
 
@@ -646,69 +645,20 @@ function evolve!(
     ######################################################################################
     #                                 TIME EVOLUTION
 
-    """
-        step(ψ, t, Δt)
-
-    Calculate the interaction picture hamiltonian in the device basis at time `t`,
-        and apply its time-evolution operator for `Δt`.
-
-    """
-    function step(ψ, t, Δt)
-        # PREPARE QUBIT DRIVES
-        for q ∈ 1:n
-            # EXTRACT TIME-DEPENDENT COEFFICIENTS
-            Ω = Pulses.amplitude(pulses[q], t)
-            ν = Pulses.frequency(pulses[q], t)
-            z = Ω * exp(im*ν*t)
-
-            # CONSTRUCT AND EXPONENTIATE MATRIX
-            tmpM_[q] .= z .* a  # ADD za TERM
-                                # THE z' a' TERM IS ACCOUNTED FOR BY THE `Hermitian` VIEW
-
-            tmpM_[q] .= exp((-im*Δt) .* Hermitian(tmpM_[q]))
-                # THIS LAST STEP SHOULD BE THE ONLY ONE REQUIRING ANY ALLOCATIONS
-        end
-
-        # APPLY QUBIT DRIVES
-        if qubitapplymode isa Kronec
-            # KRONECKER MODE: CONSTRUCT FULL-BODY OPERATOR
-            O = Utils.kron_concat(tmpM_, tmpK_)
-            return mul!(tmpV, O, ψ)
-        elseif qubitapplymode isa Tensor
-            # TENSOR MODE: RESHAPE AND CONTRACT
-            #= TODO: Write manual tensor contraction so you can control pre-allocations.
-                I still don't really know what cache is doing,
-                    but it's not doing everything it could.
-                Don't forget to change Prediag call also.
-            =#
-            ψ_ = reshape(ψ, tmpK_[1])   # *NOT* A COPY; MUTATIONS APPLY TO BOTH
-            ψ_ .= ncon(
-                [tmpM_..., ψ_],                         # LIST OF TENSORS
-                tmpK_[2],    # LIST OF INDICES ON EACH TENSOR
-                tmpK_[4], :cache,                       # ENABLE CACHING
-                output=tmpK_[3],                        # FINAL PERMUTATION
-            )
-            # ψ HAS ALREADY BEEN UPDATED, IN MUTATIONS OF ψ_
-            return ψ
-        else
-            error("Invalid `QubitApplyMode` object. (How did you manage that???)")
-        end
-    end
-
     #= NOTE: The very first step is, mathematically, exp(-𝒊 HD t_[1]),
         but since t_[1]=0, this is an identity operation and we can skip it. =#
 
     # APPLY FIRST QUBIT DRIVES  (use Δt/2 for first and last time step)
-    ψ .= step(ψ, t_[1], Δt/2)
+    ψ .= _step(ψ, t_[1], Δt/2, Rotate, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
 
     for i ∈ 2:numsteps
         ψ .= mul!(tmpV, V, ψ)       # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
-        ψ .= step(ψ, t_[i], Δt)     # APPLY QUBIT DRIVES
+        ψ .= _step(ψ, t_[i], Δt, Rotate, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
     end
     ψ .= mul!(tmpV, V, ψ)       # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
 
     # APPLY LAST PULSE DRIVES   (use Δt/2 for first and last time step)
-    ψ .= step(ψ, t_[end], Δt/2)
+    ψ .= _step(ψ, t_[end], Δt/2, Rotate, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
 
     # LAST STEP: exp(𝒊 HD t[numsteps])), ie. exp(-𝒊 HD T)
     ψ .= UD' * ψ                        # ROTATE INTO DEVICE BASIS
@@ -717,10 +667,58 @@ function evolve!(
     ######################################################################################
 
     # RE-NORMALIZE THIS STATE
-    ψ .= ψ / norm(ψ)
+    ψ ./= norm(ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
 end
+
+""" Auxiliary function for Prediag `evolve!`. """
+function _step(ψ, t, Δt, ::Type{Rotate}, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
+    ######################################################################################
+    #                                 SINGLE TIME STEP
+
+    # PREPARE QUBIT DRIVES
+    for q ∈ 1:n
+        # EXTRACT TIME-DEPENDENT COEFFICIENTS
+        Ω = Pulses.amplitude(pulses[q], t)
+        ν = Pulses.frequency(pulses[q], t)
+        z = Ω * exp(im*ν*t)
+
+        # CONSTRUCT AND EXPONENTIATE MATRIX
+        tmpM_[q] .= z .* a  # ADD za TERM
+                            # THE z' a' TERM IS ACCOUNTED FOR BY THE `Hermitian` VIEW
+
+        tmpM_[q] .= exp((-im*Δt) .* Hermitian(tmpM_[q]))
+            # THIS LAST STEP SHOULD BE THE ONLY ONE REQUIRING ANY ALLOCATIONS
+    end
+
+    # APPLY QUBIT DRIVES
+    if qubitapplymode isa Kronec
+        # KRONECKER MODE: CONSTRUCT FULL-BODY OPERATOR
+        O = Utils.kron_concat(tmpM_, tmpK_)
+        return mul!(tmpV, O, ψ)
+    elseif qubitapplymode isa Tensor
+        # TENSOR MODE: RESHAPE AND CONTRACT
+        #= TODO: Write manual tensor contraction so you can control pre-allocations.
+            I still don't really know what cache is doing,
+                but it's not doing everything it could.
+            Don't forget to change Prediag call also.
+        =#
+        ψ_ = reshape(ψ, tmpK_[1])   # *NOT* A COPY; MUTATIONS APPLY TO BOTH
+        ψ_ .= ncon(
+            [tmpM_..., ψ_],                         # LIST OF TENSORS
+            tmpK_[2],    # LIST OF INDICES ON EACH TENSOR
+            tmpK_[4], :cache,                       # ENABLE CACHING
+            output=tmpK_[3],                        # FINAL PERMUTATION
+        )
+        # ψ HAS ALREADY BEEN UPDATED, IN MUTATIONS OF ψ_
+        return ψ
+    else
+        error("Invalid `QubitApplyMode` object. (How did you manage that???)")
+    end
+end
+
+
 
 
 
@@ -884,98 +882,33 @@ function evolve!(
     ######################################################################################
     #                                 TIME EVOLUTION
 
-     """
-        step(ψ, t, Δt)
-
-    Calculate the interaction picture hamiltonian in the device basis at time `t`,
-        and apply its time-evolution operator for `Δt`.
-
-    """
-    function step(ψ, t, Δt)
-        # PREPARE QUBIT DRIVES
-        for q ∈ 1:n
-            # EXTRACT TIME-DEPENDENT COEFFICIENTS
-            Ω = Pulses.amplitude(pulses[q], t)
-            ν = Pulses.frequency(pulses[q], t)
-            z = Ω * exp(im*ν*t)
-            x, y = real(z), imag(z)
-
-            # COMBINE Q DRIVE, P DRIVE, AND ROTATIONS BETWEEN THEM
-            if     suzukiorder <  2
-                # CORE ROTATION: Q <- P
-                tmpM_[q] .= UQP                 # CORE ROTATION: P -> Q
-
-                # RIGHT-MULTIPLY BY P DRIVE
-                tmpD .= exp.((-im*Δt*y) .* Λ)   # P DRIVE CALCULATION
-                expP = Diagonal(tmpD)               # DIAGONAL VIEW
-                rmul!(tmpM_[q], expP)           # MERGE INTO QUBIT OPERATOR
-
-                #  LEFT-MULTIPLY BY Q DRIVE
-                tmpD .= exp.((-im*Δt*x) .* Λ)   # Q DRIVE CALCULATION
-                expQ = Diagonal(tmpD)               # DIAGONAL VIEW
-                lmul!(expQ, tmpM_[q])           # MERGE INTO QUBIT OPERATOR
-
-                # SPECIAL `suzukiorder=0` MODE: INCLUDE COMMUTATOR
-                suzukiorder == 0 && rmul!(tmpM_[q], exp(-im*x*y*Δt^2))
-                    # Alas, this is only going to work for large m.
-
-            elseif suzukiorder == 2
-                # CORE ROTATION: Q <- P
-                tmpM .= UQP
-
-                # RIGHT-MULTIPLY BY P DRIVE
-                tmpD .= exp.((-im*Δt*y) .* Λ)   # P DRIVE CALCULATION
-                expP = Diagonal(tmpD)               # DIAGONAL VIEW
-                rmul!(tmpM, expP)               # MERGE INTO QUBIT OPERATOR
-
-                # ADD ROTATION: P <- Q
-                mul!(tmpM_[q], tmpM, UPQ)
-
-                # LEFT- AND RIGHT-MULTIPLY BY Q DRIVE (HALF EACH)
-                tmpD .= exp.((-im*Δt*x/2) .* Λ) # Q DRIVE CALCULATION
-                expQ = Diagonal(tmpD)               # DIAGONAL VIEW
-                lmul!(expQ, tmpM_[q]); rmul!(tmpM_[q], expQ)
-            else
-                error("Only `suzukiorder`s 0, 1, and 2 are supported.")
-            end
-        end
-
-        # APPLY QUBIT DRIVES
-        if qubitapplymode isa Kronec
-            # KRONECKER MODE: CONSTRUCT FULL-BODY OPERATOR
-            O = Utils.kron_concat(tmpM_, tmpK_)
-            return mul!(tmpV, O, ψ)
-        elseif qubitapplymode isa Tensor
-            # TENSOR MODE: RESHAPE AND CONTRACT
-            ψ_ = reshape(ψ, tmpK_[1])   # *NOT* A COPY; MUTATIONS APPLY TO BOTH
-            ψ_ .= ncon(
-                [tmpM_..., ψ_],                         # LIST OF TENSORS
-                tmpK_[2],    # LIST OF INDICES ON EACH TENSOR
-                tmpK_[4], :cache,                       # ENABLE CACHING
-                output=tmpK_[3],                        # FINAL PERMUTATION
-            )
-            # ψ HAS ALREADY BEEN UPDATED, IN MUTATIONS OF ψ_
-            return ψ
-        else
-            error("Invalid `QubitApplyMode` object. (How did you manage that???)")
-        end
-    end
-
     #= NOTE: The very first step is, mathematically, exp(-𝒊 HD t_[1]),
         but since t_[1]=0, this is an identity operation and we can skip it. =#
 
     # APPLY FIRST QUBIT DRIVES  (use Δt/2 for first and last time step)
     ψ .= in_basis' * ψ
-    ψ .= step(ψ, t_[1], Δt/2)
+    ψ .= _step(ψ, t_[1], Δt/2, Prediag,
+        pulses, suzukiorder, qubitapplymode,    # PARAMETERS
+        n, Λ, UQP, UPQ,                         # INFERRED
+        tmpV, tmpD, tmpM_, tmpM, tmpK_,         # PRE-ALLOCATION
+    )
 
     for i ∈ 2:numsteps
         ψ .= mul!(tmpV, L, ψ)       # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
-        ψ .= step(ψ, t_[i], Δt)     # APPLY QUBIT DRIVES
+        ψ .= _step(ψ, t_[i], Δt, Prediag,       # APPLY QUBIT DRIVES
+            pulses, suzukiorder, qubitapplymode,    # PARAMETERS
+            n, Λ, UQP, UPQ,                         # INFERRED
+            tmpV, tmpD, tmpM_, tmpM, tmpK_,         # PRE-ALLOCATION
+        )
     end
     ψ .= mul!(tmpV, L, ψ)           # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
 
     # APPLY LAST PULSE DRIVES   (use Δt/2 for first and last time step)
-    ψ .= step(ψ, t_[end], Δt/2)
+    ψ .= _step(ψ, t_[end], Δt/2, Prediag,
+        pulses, suzukiorder, qubitapplymode,    # PARAMETERS
+        n, Λ, UQP, UPQ,                         # INFERRED
+        tmpV, tmpD, tmpM_, tmpM, tmpK_,         # PRE-ALLOCATION
+    )
     ψ .= outbasis * ψ
 
     # LAST STEP: exp(𝒊 HD t[numsteps])), ie. exp(-𝒊 HD T)
@@ -985,9 +918,87 @@ function evolve!(
     ######################################################################################
 
     # RE-NORMALIZE THIS STATE
-    ψ .= ψ / norm(ψ)
+    ψ ./= norm(ψ)
 
     if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
+end
+
+""" Auxiliary function for Prediag `evolve!`. """
+function _step(ψ, t, Δt, ::Type{Prediag},
+    pulses, suzukiorder, qubitapplymode,
+    n, Λ, UQP, UPQ,
+    tmpV, tmpD, tmpM_, tmpM, tmpK_,
+)
+    ######################################################################################
+    #                                 SINGLE TIME STEP
+
+    # PREPARE QUBIT DRIVES
+    for q ∈ 1:n
+        # EXTRACT TIME-DEPENDENT COEFFICIENTS
+        Ω = Pulses.amplitude(pulses[q], t)
+        ν = Pulses.frequency(pulses[q], t)
+        z = Ω * exp(im*ν*t)
+        x, y = real(z), imag(z)
+
+        # COMBINE Q DRIVE, P DRIVE, AND ROTATIONS BETWEEN THEM
+        if     suzukiorder <  2
+            # CORE ROTATION: Q <- P
+            tmpM_[q] .= UQP                 # CORE ROTATION: P -> Q
+
+            # RIGHT-MULTIPLY BY P DRIVE
+            tmpD .= exp.((-im*Δt*y) .* Λ)   # P DRIVE CALCULATION
+            expP = Diagonal(tmpD)               # DIAGONAL VIEW
+            rmul!(tmpM_[q], expP)           # MERGE INTO QUBIT OPERATOR
+
+            #  LEFT-MULTIPLY BY Q DRIVE
+            tmpD .= exp.((-im*Δt*x) .* Λ)   # Q DRIVE CALCULATION
+            expQ = Diagonal(tmpD)               # DIAGONAL VIEW
+            lmul!(expQ, tmpM_[q])           # MERGE INTO QUBIT OPERATOR
+
+            # SPECIAL `suzukiorder=0` MODE: INCLUDE COMMUTATOR
+            suzukiorder == 0 && rmul!(tmpM_[q], exp(-im*x*y*Δt^2))
+                # Alas, this is only going to work for large m.
+
+        elseif suzukiorder == 2
+            # CORE ROTATION: Q <- P
+            tmpM .= UQP
+
+            # RIGHT-MULTIPLY BY P DRIVE
+            tmpD .= exp.((-im*Δt*y) .* Λ)   # P DRIVE CALCULATION
+            expP = Diagonal(tmpD)               # DIAGONAL VIEW
+            rmul!(tmpM, expP)               # MERGE INTO QUBIT OPERATOR
+
+            # ADD ROTATION: P <- Q
+            mul!(tmpM_[q], tmpM, UPQ)
+
+            # LEFT- AND RIGHT-MULTIPLY BY Q DRIVE (HALF EACH)
+            tmpD .= exp.((-im*Δt*x/2) .* Λ) # Q DRIVE CALCULATION
+            expQ = Diagonal(tmpD)               # DIAGONAL VIEW
+            lmul!(expQ, tmpM_[q]); rmul!(tmpM_[q], expQ)
+        else
+            error("Only `suzukiorder`s 0, 1, and 2 are supported.")
+        end
+    end
+
+    # APPLY QUBIT DRIVES
+    if qubitapplymode isa Kronec
+        # KRONECKER MODE: CONSTRUCT FULL-BODY OPERATOR
+        O = Utils.kron_concat(tmpM_, tmpK_)
+        return mul!(tmpV, O, ψ)
+    elseif qubitapplymode isa Tensor
+        # TENSOR MODE: RESHAPE AND CONTRACT
+        ψ_ = reshape(ψ, tmpK_[1])   # *NOT* A COPY; MUTATIONS APPLY TO BOTH
+        ψ_ .= ncon(
+            [tmpM_..., ψ_],                         # LIST OF TENSORS
+            tmpK_[2],    # LIST OF INDICES ON EACH TENSOR
+            tmpK_[4], :cache,                       # ENABLE CACHING
+            output=tmpK_[3],                        # FINAL PERMUTATION
+        )
+        # ψ HAS ALREADY BEEN UPDATED, IN MUTATIONS OF ψ_
+        return ψ
+    else
+        error("Invalid `QubitApplyMode` object. (How did you manage that???)")
+    end
 end
 
 end # END MODULE
