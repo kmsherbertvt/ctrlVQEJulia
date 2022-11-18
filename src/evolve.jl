@@ -191,7 +191,8 @@ function evolve!(
         a_ = Utils.algebra(n, m, basis=UD)          # LIST OF ROTATED ANNIHILATION OPERATORS
     end
 
-    if iobasis isa QubitBasis;  ψ .= UD' * ψ;   end;    # ROTATE INTO DEVICE BASIS
+    # ROTATE INTO DEVICE BASIS
+    if iobasis isa QubitBasis;  Utils.transform!(ψ, UD', tmpV); end
 
     ######################################################################################
     #                       DEFINE AND SOLVE DIFFERENTIAL EQUATIONS
@@ -216,7 +217,8 @@ function evolve!(
 
     ######################################################################################
 
-    if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
+    # ROTATE *OUT* OF DEVICE BASIS
+    if iobasis isa QubitBasis;  Utils.transform!(ψ, UD, tmpV)   end
 end
 
 """ Auxiliary function for Direct `evolve!`.
@@ -328,7 +330,8 @@ function evolve!(
         a_ = Utils.algebra(n, m, basis=UD)          # LIST OF ROTATED ANNIHILATION OPERATORS
     end
 
-    if iobasis isa QubitBasis;  ψ .= UD' * ψ;   end;    # ROTATE INTO DEVICE BASIS
+    # ROTATE INTO DEVICE BASIS
+    if iobasis isa QubitBasis;  Utils.transform!(ψ, UD', tmpV); end
 
     ######################################################################################
     #                                 TIME EVOLUTION
@@ -348,7 +351,8 @@ function evolve!(
     # RE-NORMALIZE THIS STATE
     ψ ./= norm(ψ)
 
-    if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
+    # ROTATE *OUT* OF DEVICE BASIS
+    if iobasis isa QubitBasis;  Utils.transform!(ψ, UD, tmpV)   end
 end
 
 """ Auxiliary function for Direct `evolve!`. """
@@ -471,7 +475,8 @@ function evolve!(
         a_ = Utils.algebra(n, m, basis=UD)          # LIST OF ROTATED ANNIHILATION OPERATORS
     end
 
-    if iobasis isa QubitBasis;  ψ .= UD' * ψ;   end;    # ROTATE INTO DEVICE BASIS
+    # ROTATE INTO DEVICE BASIS
+    if iobasis isa QubitBasis;  Utils.transform!(ψ, UD', tmpV); end
 
     ######################################################################################
     #                                 TIME EVOLUTION
@@ -491,11 +496,8 @@ function evolve!(
     # RE-NORMALIZE THIS STATE
     ψ ./= norm(ψ)
 
-    #= TODO: We spent so long IN time loop that we forgot to optimize OUTSIDE.
-        ψ .= U * ψ -> ψ = mul!(tmpV, U, ψ); ψ .= tmpV
-    =#
-
-    if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
+    # ROTATE *OUT* OF DEVICE BASIS
+    if iobasis isa QubitBasis;  Utils.transform!(ψ, UD, tmpV);  end
 end
 
 
@@ -640,7 +642,8 @@ function evolve!(
         )
     end
 
-    if iobasis isa DeviceBasis; ψ .= UD * ψ;    end;    # ROTATE *OUT* OF DEVICE BASIS
+    # ROTATE *OUT* OF DEVICE BASIS
+    if iobasis isa DeviceBasis; Utils.transform!(ψ, UD, tmpV);  end
 
     ######################################################################################
     #                                 TIME EVOLUTION
@@ -652,16 +655,16 @@ function evolve!(
     ψ .= _step(ψ, t_[1], Δt/2, Rotate, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
 
     for i ∈ 2:numsteps
-        ψ .= mul!(tmpV, V, ψ)       # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
+        Utils.transform!(ψ, V, tmpV)        # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
         ψ .= _step(ψ, t_[i], Δt, Rotate, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
     end
-    ψ .= mul!(tmpV, V, ψ)       # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
+    Utils.transform!(ψ, V, tmpV)        # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
 
     # APPLY LAST PULSE DRIVES   (use Δt/2 for first and last time step)
     ψ .= _step(ψ, t_[end], Δt/2, Rotate, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
 
     # LAST STEP: exp(𝒊 HD t[numsteps])), ie. exp(-𝒊 HD T)
-    ψ .= UD' * ψ                        # ROTATE INTO DEVICE BASIS
+    Utils.transform!(ψ, UD', tmpV)      # ROTATE INTO DEVICE BASIS
     ψ .*= exp.( (im*T) * ΛD)            # ROTATE PHASES FOR ONE LAST TIME EVOLUTION
 
     ######################################################################################
@@ -669,7 +672,8 @@ function evolve!(
     # RE-NORMALIZE THIS STATE
     ψ ./= norm(ψ)
 
-    if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
+    # ROTATE *OUT* OF DEVICE BASIS
+    if iobasis isa QubitBasis;  Utils.transform!(ψ, UD, tmpV);  end
 end
 
 """ Auxiliary function for Prediag `evolve!`. """
@@ -877,7 +881,8 @@ function evolve!(
         tmpM = Matrix{ComplexF64}(undef, m,m)
     end;
 
-    if iobasis isa DeviceBasis; ψ .= UD * ψ;    end;    # ROTATE *OUT* OF DEVICE BASIS
+    # ROTATE *OUT* OF DEVICE BASIS
+    if iobasis isa DeviceBasis; Utils.transform!(ψ, UD, tmpV);  end
 
     ######################################################################################
     #                                 TIME EVOLUTION
@@ -886,7 +891,7 @@ function evolve!(
         but since t_[1]=0, this is an identity operation and we can skip it. =#
 
     # APPLY FIRST QUBIT DRIVES  (use Δt/2 for first and last time step)
-    ψ .= in_basis' * ψ
+    Utils.transform!(ψ, in_basis', tmpV)
     ψ .= _step(ψ, t_[1], Δt/2, Prediag,
         pulses, suzukiorder, qubitapplymode,    # PARAMETERS
         n, Λ, UQP, UPQ,                         # INFERRED
@@ -894,14 +899,14 @@ function evolve!(
     )
 
     for i ∈ 2:numsteps
-        ψ .= mul!(tmpV, L, ψ)       # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
+        Utils.transform!(ψ, L, tmpV)        # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
         ψ .= _step(ψ, t_[i], Δt, Prediag,       # APPLY QUBIT DRIVES
             pulses, suzukiorder, qubitapplymode,    # PARAMETERS
             n, Λ, UQP, UPQ,                         # INFERRED
             tmpV, tmpD, tmpM_, tmpM, tmpK_,         # PRE-ALLOCATION
         )
     end
-    ψ .= mul!(tmpV, L, ψ)           # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
+    Utils.transform!(ψ, L, tmpV)            # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
 
     # APPLY LAST PULSE DRIVES   (use Δt/2 for first and last time step)
     ψ .= _step(ψ, t_[end], Δt/2, Prediag,
@@ -909,10 +914,10 @@ function evolve!(
         n, Λ, UQP, UPQ,                         # INFERRED
         tmpV, tmpD, tmpM_, tmpM, tmpK_,         # PRE-ALLOCATION
     )
-    ψ .= outbasis * ψ
+    Utils.transform!(ψ, outbasis, tmpV)
 
     # LAST STEP: exp(𝒊 HD t[numsteps])), ie. exp(-𝒊 HD T)
-    ψ .= UD' * ψ                        # ROTATE INTO DEVICE BASIS
+    Utils.transform!(ψ, UD', tmpV)      # ROTATE INTO DEVICE BASIS
     ψ .*= exp.( (im*T) .* ΛD)           # ROTATE PHASES FOR ONE LAST TIME EVOLUTION
 
     ######################################################################################
@@ -920,7 +925,8 @@ function evolve!(
     # RE-NORMALIZE THIS STATE
     ψ ./= norm(ψ)
 
-    if iobasis isa QubitBasis;  ψ .= UD  * ψ;   end;    # ROTATE *OUT* OF DEVICE BASIS
+    # ROTATE *OUT* OF DEVICE BASIS
+    if iobasis isa QubitBasis;  Utils.transform!(ψ, UD, tmpV);  end
 end
 
 """ Auxiliary function for Prediag `evolve!`. """

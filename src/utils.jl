@@ -2,8 +2,27 @@
 
 module Utils
 
-import LinearAlgebra: kron, I, eigen, Eigen, Hermitian, norm
+import LinearAlgebra: kron, I, eigen, Eigen, Hermitian, norm, mul!
 
+
+"""
+    transform!(x::Vector{T}, A::Matrix{<:Number}[, _x::Vector{T}]) where T <: Number
+
+Calculate the matrix-vector product A·x and copy the result into `x`.
+
+`_x` is a pre-allocated "work variable" storing intermediate results.
+In fact, this method just calls Julia's in-place matrix multiplication,
+    then copies the results to the original vector.
+"""
+function transform!(
+    x::Vector{T}, A::AbstractMatrix{<:Number}, _x::Vector{T}
+) where T <: Number
+    x .= mul!(_x, A, x)
+end
+
+transform!(x::Vector{<:Number}, A::Matrix{<:Number}) = transform!(
+    x, A, Vector{eltype(x)}(undef, length(x))
+)
 
 """
     a_matrix(m::Int=2)
