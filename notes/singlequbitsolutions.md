@@ -44,7 +44,7 @@ $$ a = \left[\begin{array}{cc}
 \end{array}\right]$$
 
 The static Hamiltonian $\hat H_0$ is:
-$$\begin{array}{rl} \hat H_0
+$$\begin{aligned} \hat H_0
 &= ω a^† a - \frac{δ}{2} a^† a^† a a \\
 &= ω \left[\begin{array}{cc}
 	0 & 0 \\
@@ -70,7 +70,7 @@ $$\begin{array}{rl} \hat H_0
 	0 & 0 \\
 	0 & ω
 \end{array}\right]
-\end{array}$$
+\end{aligned}$$
 Note that the quadratic operator $a^† a^† a a$ is actually zero for $m=2$, rendering the anharmonicity $δ$ irrelevant in this problem.
 
 Since this is a diagonal matrix, the matrix exponential $e^{it\hat H_0}$ is easily calculated by applying the exponential function to each diagonal entry:
@@ -80,7 +80,7 @@ $$ e^{it\hat H_0} = \left[\begin{array}{cc}
 \end{array}\right]$$
 
 The drive operator $\hat V(t)$ is:
-$$\begin{array}{rl} \hat V(t)
+$$\begin{aligned} \hat V(t)
 &= Ω\left(e^{iνt} \left[\begin{array}{cc}
     0 & 1 \\
     0 & 0
@@ -92,10 +92,10 @@ $$\begin{array}{rl} \hat V(t)
     0 & Ω e^{iνt} \\
     Ω e^{-iνt} & 0
 \end{array}\right]
-\end{array}$$
+\end{aligned}$$
 
 Conjugation with the drive operator yields:
-$$\begin{array}{rl} \hat V_I(t)
+$$\begin{aligned} \hat V_I(t)
 &= e^{it\hat H_0} \hat V(t) e^{-it\hat H_0} \\
 &= \left[\begin{array}{cc}
 	1 & 0 \\
@@ -118,7 +118,7 @@ $$\begin{array}{rl} \hat V_I(t)
     0 & Ω e^{-iΔt} \\
     Ω e^{iΔt} & 0
 \end{array}\right]
-\end{array}$$
+\end{aligned}$$
 where we have defined the detuning $Δ≡ω-ν$.
 
 ### Step Two: Defining the System of Equations
@@ -134,15 +134,15 @@ $$ i \frac{∂}{∂t} \left[\begin{array}{c}
 	c_1
 \end{array}\right] $$
 This is really just two scalar equations:
-$$\begin{array}{rl}
+$$\begin{aligned}
 i \dot c_0 &= Ω e^{-iΔt} c_1 \\
 i \dot c_1 &= Ω e^{+iΔt} c_0
-\end{array}$$
+\end{aligned}$$
 Dividing by $i$ and throwing everything to one side puts the differential equations in standard form:
-$$ \begin{array}{rl}
+$$ \begin{aligned}
 \dot c_0 + iΩ e^{-iΔt} c_1 &= 0 \\
 \dot c_1 + iΩ e^{+iΔt} c_0 &= 0
-\end{array} $$
+\end{aligned} $$
 
 ### Step Three: Solving the System of Equations
 We'll focus on solving $c_0(t)$ first, then use a symmetry argument to write down $c_1(t)$.
@@ -170,67 +170,67 @@ Note immediately that the discriminant _cannot_ be zero for any $Ω \ne 0$, so w
 
 Now I'm going to use the greatest weapon in the theoretical physicist's arsenal: a large alphabet.
 Let me define two new constants:
-$$ \begin{array}{rl}
+$$ \begin{aligned}
 χ &≡ 2Ω/Δ \\
 η &≡ \sqrt{1 + χ^2}
-\end{array} $$
+\end{aligned} $$
 Now let me simplify $r$:
-$$ \begin{array}{rl} r_\pm
+$$ \begin{aligned} r_\pm
 &= \frac{1}{2}(-iΔ \pm \sqrt{-Δ^2 - 4Ω^2}) \\
 &= \frac{1}{2}(-iΔ \pm iΔ \sqrt{1 + 4Ω^2/Δ^2}) \\
 &= -iΔ · \frac{1}{2}(1 \mp \sqrt{1 + χ^2}) \\
 &= -iΔ \frac{1 \mp η}{2}
-\end{array} $$
+\end{aligned} $$
 This is the _simplest_ form for $r$, but since $η$ has 1 as a lower bound, it's more _elegant_ to use this form:
 $$ r_\pm = \pm iΔ \frac{η \mp 1}{2} $$
 
 Now we can write out a _general_ solution as the linear combination of our two particular solutions:
-$$ \begin{array}{rl} c_0(t)
+$$ \begin{aligned} c_0(t)
 &= A_+ e^{r_+t} + A_- e^{r_-t} \\
 &= A_+ e^{iΔ \frac{η - 1}{2}t} + A_- e^{-iΔ \frac{η + 1}{2}t}
-\end{array} $$
+\end{aligned} $$
 We will soon need an explicit formula for $\dot c_0$ also:
 $$ \dot c_0 = iΔ \frac{η - 1}{2} A_+ e^{iΔ \frac{η - 1}{2}t}
 	-  iΔ \frac{η + 1}{2} A_- e^{-iΔ \frac{η + 1}{2}t} $$
 
 We will solve for $A\pm$ by constraining them to our initial conditions:
-$$ \begin{array}{rl}
+$$ \begin{aligned}
 c_0(0) &= ⟨0|ψ_0⟩ \\
 c_1(0) &= ⟨1|ψ_0⟩
-\end{array} $$
+\end{aligned} $$
 The second constraint actually gives us $\dot c_0(0)$, from our first differential equation:
-$$ \begin{array}{rl}
+$$ \begin{aligned}
 \dot c_0 + iΩ e^{-iΔt} c_1 &= 0 \\
 \dot c_0(0) &= -iΩ c_1(0) \\
 &= -iΩ ⟨1|ψ_0⟩
-\end{array} $$
+\end{aligned} $$
 Now we can put in $c_0(0)$ and $\dot c_0(0)$ to create a system of two equations and solve for our two unknowns $A_\pm$:
-$$ \begin{array}{rl}
+$$ \begin{aligned}
 	⟨0|ψ_0⟩ &= A_+ + A_- \\
 -iΩ ⟨1|ψ_0⟩ &= iΔ \frac{η - 1}{2} A_+ - iΔ \frac{η + 1}{2} A_- 
-\end{array} $$
+\end{aligned} $$
 I will let the reader confirm the following solution:
-$$ \begin{array}{rl}
+$$ \begin{aligned}
 A_\pm = ⟨0|ψ_0⟩ \frac{η \pm 1}{2η} \mp ⟨1|ψ_0⟩ \frac{χ}{2η}
-\end{array} $$
+\end{aligned} $$
 
 The final solution can be written out as:
-$$ \begin{array}{rl} c_0(t)
+$$ \begin{aligned} c_0(t)
    =&  \left(⟨0|ψ_0⟩ \frac{η + 1}{2η} - ⟨1|ψ_0⟩ \frac{χ}{2η}\right)
 	   e^{iΔ \frac{η - 1}{2}t} \\
 	&+ \left(⟨0|ψ_0⟩ \frac{η - 1}{2η} + ⟨1|ψ_0⟩ \frac{χ}{2η}\right)
 		e^{-iΔ \frac{η + 1}{2}t}
-\end{array} $$
+\end{aligned} $$
 
 
 To solve $c_1(t)$, note that the two differential equations are identical except that they permute $|0⟩ \leftrightarrow |1⟩$ and $Δ\leftrightarrow-Δ$.
 Therefore, the solution is:
-$$ \begin{array}{rl} c_1(t)
+$$ \begin{aligned} c_1(t)
    =&  \left(⟨1|ψ_0⟩ \frac{η + 1}{2η} + ⟨0|ψ_0⟩ \frac{χ}{2η}\right)
 	   e^{-iΔ \frac{η - 1}{2}t} \\
 	&+ \left(⟨1|ψ_0⟩ \frac{η - 1}{2η} - ⟨0|ψ_0⟩ \frac{χ}{2η}\right)
 		e^{iΔ \frac{η + 1}{2}t}
-\end{array} $$
+\end{aligned} $$
 
 ## Basic Square Pulse: $m=3$
 This problem will be considered a direct sequel to the $m=2$ problem, so I won't re-state things I worked out in detail there.
@@ -255,10 +255,10 @@ $$ \hat V_I(t) = \left[\begin{array}{cc}
 \end{array}\right] $$
 
 Using that greatest of tools, I'm just going to define the constants:
-$$ \begin{array}{rl}
+$$ \begin{aligned}
 V_1 &≡ Ω e^{iΔt} \\
 V_2 &≡ \sqrt{2} Ω e^{i(Δ-δ)t} \\
-\end{array} $$
+\end{aligned} $$
 Using bars to denote complex conjugates, I can now write:
 $$ \hat V_I(t) = \left[\begin{array}{cc}
     0 & \overline V_1 & 0 \\
@@ -268,23 +268,23 @@ $$ \hat V_I(t) = \left[\begin{array}{cc}
 
 ### Step Two: Defining the System of Equations
 Expanding out Schrödinger's equation:
-$$ \begin{array}{rl}
+$$ \begin{aligned}
 \dot c_0 + i\overline V_1 c_1 &= 0 \\
 \dot c_1 + i V_1 c_0 + i\overline V_2 c_2 &= 0 \\
 \dot c_2 + i V_2 c_1 &= 0
-\end{array} $$
+\end{aligned} $$
 
 ### Step Three: Solving the System of Equations
 I found it immensely helpful for the algebra to define just a couple more constants:
-$$ \begin{array}{rl}
+$$ \begin{aligned}
 C_i &≡ |V_i|^2 \\
 D_i &≡ (∂_t V_i) / V_i
-\end{array} $$
+\end{aligned} $$
 
 The next step is to de-couple the system of differential equations, obtaining a third-order differential equation for each $c_i$.
 I can't pretend it's easy...
 Here's what I got:
-$$ \begin{array}{rl}
+$$ \begin{aligned}
 \mathbf{\dddot c_0}
 	- (2\overline D_1 + \overline D_2) \mathbf{\ddot c_0}
 	+ [C_1^2 + C_2^2 + \overline D_1 (\overline D_1 + \overline D_2)] \mathbf{\dot c_0}
@@ -300,7 +300,7 @@ $$ \begin{array}{rl}
 	+ [C_1^2 + C_2^2 + D_1 (D_1 + D_2)] \mathbf{\dot c_2}
 	- C_2^2 (D_1 + D_2) \mathbf{c_2}
 	&= 0
-\end{array} $$
+\end{aligned} $$
 
 Here ends the analytical side of these derivations.
 To finish the problem, we need to do the following:
