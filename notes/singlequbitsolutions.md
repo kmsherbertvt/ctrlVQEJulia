@@ -3,20 +3,30 @@
 
 Given an input state $|ψ_0⟩$ subject to a Hamiltonian $\hat H=\hat H_0+\hat V(t)$ , what is the state $|ψ(T)⟩$?
 In this notebook, we will use a single transmon qubit:
+
 $$\hat H_0 = ω a^† a - \frac{δ}{2} a^† a^† a a $$
+
 with a time-dependent EM field:
+
 $$\hat V(t) = Ω (e^{iνt} a + e^{-iνt} a^†) $$
+
 The amplitude $Ω$ and frequency $ν$ may in general be time-dependent, although the first (and currently only) examples will take them as constant for the duration of the evolution (ie. a basic square pulse).
 
 The operator $a$ is the bosonic annihilation operator, defined by the following action:
+
 $$ a|n⟩ = \sqrt{n} |n-1⟩ $$
+
 where $|n⟩$ is the state with occupation number $n$.
 We will use this occupation number basis throughout, but we will typically truncate it to a finite number of $m$ modes for each problem.
 
 The solutions in this notebook will be solutions to Schrödinger's equation in the interaction picture:
+
 $$ i \frac{∂}{∂t} |ψ_I⟩ = \hat V_I |ψ_I⟩ $$
+
 where the interaction Hamiltonian is:
+
 $$ \hat V_I(t) = e^{it\hat H_0} \hat V(t) e^{-it\hat H_0} $$
+
 We will commit 100% to the interaction picture, so we will start and end with the interaction statevector $|ψ_I⟩=e^{it \hat H_0} |ψ⟩$.
 To calculate the "true" state, remember to "rewind" the results by $e^{-it\hat H_0}$.
 
@@ -31,19 +41,23 @@ For this first problem, we will take $Ω$ and $ν$ as constant.
 
 ### Step One: Representation in a Finite Space
 We may expand our wavefunction at any arbitrary time as:
+
 $$ |ψ_I⟩=\sum_{i=0}^{m-1} c_i |i⟩ $$
+
 where the coefficients $c_i≡⟨i|ψ_I⟩$ are time-dependent.
 The vector representation of $|ψ_I⟩$ is simply a column vector of these $c_i$ coefficients.
 
 Now let's focus on constructing $\hat V_I$ as a matrix.
 
 Truncated to $m=2$, the bosonic annihilation operator $a$ has the following form:
+
 $$ a = \left[\begin{array}{cc}
     0 & 1 \\
     0 & 0
 \end{array}\right]$$
 
 The static Hamiltonian $\hat H_0$ is:
+
 $$\begin{aligned} \hat H_0
 &= ω a^† a - \frac{δ}{2} a^† a^† a a \\
 &= ω \left[\begin{array}{cc}
@@ -71,15 +85,18 @@ $$\begin{aligned} \hat H_0
 	0 & ω
 \end{array}\right]
 \end{aligned}$$
+
 Note that the quadratic operator $a^† a^† a a$ is actually zero for $m=2$, rendering the anharmonicity $δ$ irrelevant in this problem.
 
 Since this is a diagonal matrix, the matrix exponential $e^{it\hat H_0}$ is easily calculated by applying the exponential function to each diagonal entry:
+
 $$ e^{it\hat H_0} = \left[\begin{array}{cc}
 	1 & 0 \\
 	0 & e^{iωt}
 \end{array}\right]$$
 
 The drive operator $\hat V(t)$ is:
+
 $$\begin{aligned} \hat V(t)
 &= Ω\left(e^{iνt} \left[\begin{array}{cc}
     0 & 1 \\
@@ -95,6 +112,7 @@ $$\begin{aligned} \hat V(t)
 \end{aligned}$$
 
 Conjugation with the drive operator yields:
+
 $$\begin{aligned} \hat V_I(t)
 &= e^{it\hat H_0} \hat V(t) e^{-it\hat H_0} \\
 &= \left[\begin{array}{cc}
@@ -119,10 +137,12 @@ $$\begin{aligned} \hat V_I(t)
     Ω e^{iΔt} & 0
 \end{array}\right]
 \end{aligned}$$
+
 where we have defined the detuning $Δ≡ω-ν$.
 
 ### Step Two: Defining the System of Equations
 Schrödinger's equation $i \frac{∂}{∂t} |ψ_I⟩ = \hat V_I |ψ_I⟩$ can now be rewritten as a matrix equation:
+
 $$ i \frac{∂}{∂t} \left[\begin{array}{c}
 	c_0 \\
 	c_1
@@ -133,12 +153,16 @@ $$ i \frac{∂}{∂t} \left[\begin{array}{c}
 	c_0 \\
 	c_1
 \end{array}\right] $$
+
 This is really just two scalar equations:
+
 $$\begin{aligned}
 i \dot c_0 &= Ω e^{-iΔt} c_1 \\
 i \dot c_1 &= Ω e^{+iΔt} c_0
 \end{aligned}$$
+
 Dividing by $i$ and throwing everything to one side puts the differential equations in standard form:
+
 $$ \begin{aligned}
 \dot c_0 + iΩ e^{-iΔt} c_1 &= 0 \\
 \dot c_1 + iΩ e^{+iΔt} c_0 &= 0
@@ -148,11 +172,17 @@ $$ \begin{aligned}
 We'll focus on solving $c_0(t)$ first, then use a symmetry argument to write down $c_1(t)$.
 
 Take our first equation:
+
 $$ \dot c_0 + iΩ e^{-iΔt} c_1 = 0 $$
+
 Now take an extra derivative:
+
 $$ \ddot c_0 + (-iΔ) (iΩ e^{-iΔt} c_1)  + iΩ e^{-iΔt} \dot c_1 = 0 $$
+
 We can eliminate $c_1$ using the original first equation, and $\dot c_1$ using the second equation:
+
 $$ \ddot c_0 + iΔ \dot c_0 + Ω^2 c_0 = 0 $$
+
 This is a homogenous second-order linear differential equation with constant coefficients.
 You can look up the standard solution in a textbook, but I'll run through a quick way to pseudo-re-derive it, which I have always found invaluable.
 
@@ -160,61 +190,83 @@ First off, we know that there should be two linearly independent solutions: no m
 Second off, this is a physics problem, so we might as well try $c_0(t) = e^{rt}$.
 (:P)
 Then we have:
+
 $$ r^2 e^{rt} + iΔ r e^{rt} + Ω^2 e^{rt} = 0 $$
+
 We can divide off the $e^{rt}$ factor (so long as we don't later discover $r=-\infty$) to generate the so-called "auxiliary equation":
+
 $$ r^2 + iΔr + Ω^2 = 0 $$
+
 This is a degree-2 polynomial equation, which has two roots - so as long as they're unique, that's our two solutions right there.
 Using the quadratic equation:
+
 $$ r = \frac{1}{2}(-iΔ \pm \sqrt{-Δ^2 - 4Ω^2}) $$
+
 Note immediately that the discriminant _cannot_ be zero for any $Ω \ne 0$, so we have indeed found both solutions.
 
 Now I'm going to use the greatest weapon in the theoretical physicist's arsenal: a large alphabet.
 Let me define two new constants:
+
 $$ \begin{aligned}
 χ &≡ 2Ω/Δ \\
 η &≡ \sqrt{1 + χ^2}
 \end{aligned} $$
+
 Now let me simplify $r$:
+
 $$ \begin{aligned} r_\pm
 &= \frac{1}{2}(-iΔ \pm \sqrt{-Δ^2 - 4Ω^2}) \\
 &= \frac{1}{2}(-iΔ \pm iΔ \sqrt{1 + 4Ω^2/Δ^2}) \\
 &= -iΔ · \frac{1}{2}(1 \mp \sqrt{1 + χ^2}) \\
 &= -iΔ \frac{1 \mp η}{2}
 \end{aligned} $$
+
 This is the _simplest_ form for $r$, but since $η$ has 1 as a lower bound, it's more _elegant_ to use this form:
+
 $$ r_\pm = \pm iΔ \frac{η \mp 1}{2} $$
 
 Now we can write out a _general_ solution as the linear combination of our two particular solutions:
+
 $$ \begin{aligned} c_0(t)
 &= A_+ e^{r_+t} + A_- e^{r_-t} \\
 &= A_+ e^{iΔ \frac{η - 1}{2}t} + A_- e^{-iΔ \frac{η + 1}{2}t}
 \end{aligned} $$
+
 We will soon need an explicit formula for $\dot c_0$ also:
+
 $$ \dot c_0 = iΔ \frac{η - 1}{2} A_+ e^{iΔ \frac{η - 1}{2}t}
 	-  iΔ \frac{η + 1}{2} A_- e^{-iΔ \frac{η + 1}{2}t} $$
 
 We will solve for $A\pm$ by constraining them to our initial conditions:
+
 $$ \begin{aligned}
 c_0(0) &= ⟨0|ψ_0⟩ \\
 c_1(0) &= ⟨1|ψ_0⟩
 \end{aligned} $$
+
 The second constraint actually gives us $\dot c_0(0)$, from our first differential equation:
+
 $$ \begin{aligned}
 \dot c_0 + iΩ e^{-iΔt} c_1 &= 0 \\
 \dot c_0(0) &= -iΩ c_1(0) \\
 &= -iΩ ⟨1|ψ_0⟩
 \end{aligned} $$
+
 Now we can put in $c_0(0)$ and $\dot c_0(0)$ to create a system of two equations and solve for our two unknowns $A_\pm$:
+
 $$ \begin{aligned}
 	⟨0|ψ_0⟩ &= A_+ + A_- \\
 -iΩ ⟨1|ψ_0⟩ &= iΔ \frac{η - 1}{2} A_+ - iΔ \frac{η + 1}{2} A_- 
 \end{aligned} $$
+
 I will let the reader confirm the following solution:
+
 $$ \begin{aligned}
 A_\pm = ⟨0|ψ_0⟩ \frac{η \pm 1}{2η} \mp ⟨1|ψ_0⟩ \frac{χ}{2η}
 \end{aligned} $$
 
 The final solution can be written out as:
+
 $$ \begin{aligned} c_0(t)
    =&  \left(⟨0|ψ_0⟩ \frac{η + 1}{2η} - ⟨1|ψ_0⟩ \frac{χ}{2η}\right)
 	   e^{iΔ \frac{η - 1}{2}t} \\
@@ -225,6 +277,7 @@ $$ \begin{aligned} c_0(t)
 
 To solve $c_1(t)$, note that the two differential equations are identical except that they permute $|0⟩ \leftrightarrow |1⟩$ and $Δ\leftrightarrow-Δ$.
 Therefore, the solution is:
+
 $$ \begin{aligned} c_1(t)
    =&  \left(⟨1|ψ_0⟩ \frac{η + 1}{2η} + ⟨0|ψ_0⟩ \frac{χ}{2η}\right)
 	   e^{-iΔ \frac{η - 1}{2}t} \\
@@ -241,6 +294,7 @@ As in the $m=2$ problem, $|ψ_I⟩$ will just be a vector of time-dependent coef
 Now there will be three of them.
 
 To construct the matrix representation of $\hat V_I$, note that the annihilation operator $a$ now becomes:
+
 $$ a = \left[\begin{array}{cc}
     0 & 1 & 0 \\
     0 & 0 & \sqrt{2} \\
@@ -248,6 +302,7 @@ $$ a = \left[\begin{array}{cc}
 \end{array}\right] $$
 
 With patience, you should be able to derive:
+
 $$ \hat V_I(t) = \left[\begin{array}{cc}
     0 & Ω e^{-iΔt} & 0 \\
     Ω e^{iΔt} & 0 & \sqrt{2} Ω e^{-i(Δ-δ)t} \\
@@ -255,11 +310,14 @@ $$ \hat V_I(t) = \left[\begin{array}{cc}
 \end{array}\right] $$
 
 Using that greatest of tools, I'm just going to define the constants:
+
 $$ \begin{aligned}
 V_1 &≡ Ω e^{iΔt} \\
 V_2 &≡ \sqrt{2} Ω e^{i(Δ-δ)t} \\
 \end{aligned} $$
+
 Using bars to denote complex conjugates, I can now write:
+
 $$ \hat V_I(t) = \left[\begin{array}{cc}
     0 & \overline V_1 & 0 \\
     V_1 & 0 & \overline V_2 \\
@@ -268,6 +326,7 @@ $$ \hat V_I(t) = \left[\begin{array}{cc}
 
 ### Step Two: Defining the System of Equations
 Expanding out Schrödinger's equation:
+
 $$ \begin{aligned}
 \dot c_0 + i\overline V_1 c_1 &= 0 \\
 \dot c_1 + i V_1 c_0 + i\overline V_2 c_2 &= 0 \\
@@ -276,6 +335,7 @@ $$ \begin{aligned}
 
 ### Step Three: Solving the System of Equations
 I found it immensely helpful for the algebra to define just a couple more constants:
+
 $$ \begin{aligned}
 C_i &≡ |V_i|^2 \\
 D_i &≡ (∂_t V_i) / V_i
@@ -284,6 +344,7 @@ D_i &≡ (∂_t V_i) / V_i
 The next step is to de-couple the system of differential equations, obtaining a third-order differential equation for each $c_i$.
 I can't pretend it's easy...
 Here's what I got:
+
 $$ \begin{aligned}
 \mathbf{\dddot c_0}
 	- (2\overline D_1 + \overline D_2) \mathbf{\ddot c_0}
