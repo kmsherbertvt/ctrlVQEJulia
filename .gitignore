@@ -1,4 +1,5 @@
 .vscode/
+*/.obsidian/
 docs/build/
 deprecated/
 script/_*

@@ -29,7 +29,7 @@ Throughout, assume fundamental constants like $\hbar$ are unity, so that energy 
 Our problem is one of a time-dependent perturbation:
   the structure of the quantum computer itself confers a "static" Hamiltonian $\hat H_0$,
   while the controllable EM wave confers a time-dependent "drive" Hamiltonian $\hat V(t)$.
-  
+
 $$ \hat H = \hat H_0 + \hat V(t) $$
 
 #### Time-Independent Hamiltonian
@@ -69,7 +69,7 @@ By truncating each transmon to just $m$ modes, we can represent $|ψ⟩$ and $\h
   with a finite $N$-dimensional vector and a finite $N×N$ matrix, where $N≡m^n$.
 Thus, Schrödinger's equation is a linear first-order system of (many) differential equations,
   and in principle it can be integrated numerically.
-  
+
 Alternatively, we can solve this system symbolically, by momentarily pretending that $|ψ⟩$ and $\hat H$ are scalar...
 
 $$ |ψ(t)⟩ = e^{ -i \int_0^t \hat H dt } |ψ(0)⟩ $$
@@ -180,7 +180,7 @@ The code includes a number of distinct evolution methods; this section attempts 
 
 `ODE` is short for "Ordinary Differential Equation" and at present,
   this method is the only performing time evolution by solving a system of linear differential equations.
-  
+
 $$ \dot{\vec ψ} = -i \mathbf{V}(t) · \vec ψ $$
 
 There are in fact _countless_ ways to numerically solve a system of differential equations.
@@ -335,7 +335,7 @@ The trickier-but-more-efficient approach is to reinterpret $\vec ψ$ as an $n$-b
 
 $$ \mathbf{D}ψ_{i_n,…i_2,i_1} = \mathbf{D_{i_n,j_n}^{(q)}} … \mathbf{D_{i_2,j_2}^{(2)}} \mathbf{D_{i_1,j_1}^{(1)}} ψ_{j_n,…j_2,j_1} $$
 
-In principle, this contraction can be computed with a runtime of $O(nN)$.
+In principle, this contraction can be computed with a runtime of $O(mnN)$.
 As long as it is implemented well, this results in a runtime bounded by applying the ligand operator: $O(rN^2)$.
 This is, I think, as good as it gets, unless sparsity in $\mathbf{L}$ can be exploited.
 
@@ -404,7 +404,7 @@ The _only_ trouble is that it seems to require at least two matrix-matrix multip
 Yeah, diagonalizing a matrix has the same asymptotic complexity as matrix multiplication.
 The direct exponentiation has a little overhead from requiring a matrix multiplication after solving the eigenvalue problem,
   but since this formula itself requires _two_ matrix multiplications, that balances out...
-  
+
 Oh, but can't we do matrix-vector multiplications instead..?
 Alright, let's say you are using the efficient tensor contraction method to apply each of these matrix products one at a time.
 You have to apply at least three contractions, each being $O(N)$ (or really $O(nN)$ if doing each qubit in parallel; it doesn't change the analysis).
