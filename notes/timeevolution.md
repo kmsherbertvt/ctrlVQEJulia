@@ -21,7 +21,7 @@ This notebook focuses on the former problem, for transmon qubits.
 - $ν=$ EM carrier wave frequencies
 - $T=$ total duration of EM wave
 - $r=$ number of steps in a discretized time evolution
-- $Δt=$ length of step in a discretized time evolution
+- $τ=$ length of step in a discretized time evolution
 
 Throughout, assume fundamental constants like $\hbar$ are unity, so that energy and frequency are interchangeable.
 
@@ -81,8 +81,8 @@ Its effect on a numerical treatment is somewhat more intuitive:
   by discretizing time, the integral becomes a sum, and the exponential-of-sums becomes a time-ordered product-of-exponentials:
 
 $$\begin{array}{rl}
-  |ψ(t)⟩ &= \exp \left\[ -i Δt \displaystyle\sum_{i=1}^r \hat H_i \right\] |ψ(0)⟩ \\
-         &= e^{ -i Δt \hat H_r } … e^{ -i Δt \hat H_2 } · e^{ -i Δt \hat H_1 } |ψ(0)⟩
+  |ψ(t)⟩ &= \exp \left\[ -i τ \displaystyle\sum_{i=1}^r \hat H_i \right\] |ψ(0)⟩ \\
+         &= e^{ -i τ \hat H_r } … e^{ -i τ \hat H_2 } · e^{ -i τ \hat H_1 } |ψ(0)⟩
 \end{array}$$
 
 The first step, turning the integral into a sum, can be done in a number of different ways which will be discussed a little later on.
@@ -90,7 +90,7 @@ The first step, turning the integral into a sum, can be done in a number of diff
 The last step, turning an exponential-of-sums into a product-of-exponentials, is known as Trotterization,
   and it is only exact when all the terms commute.
 This will not generally be the case!
-There will be some error which tends to scale by $O(Δt^2)$, so the error vanishes as you increase $r$.
+There will be some error which tends to scale by $O(τ^2)$, so the error vanishes as you increase $r$.
 In fact there are more complicated ways to Trotterize which have better error scaling,
   but I don't actually know how they interact with the time-ordering operator,
   so they're best omitted from this discussion.
@@ -129,12 +129,12 @@ $$ \dot{\vec ψ} = -i \mathbf{V}(t) · \vec ψ $$
 2. Represent the quantum state $|ψ_I⟩$ with a finite vector $\vec ψ$ and the operator $\hat V_I$ with a finite matrix $\mathbf{V}$.
 3. Evaluate the product:
 
-$$ \vec ψ(t) = e^{ -i Δt \mathbf{V_r} } … e^{ -i Δt \mathbf{V_2} } · e^{ -i Δt \mathbf{V_1} } \vec ψ(0) $$
+$$ \vec ψ(t) = e^{ -i τ \mathbf{V_r} } … e^{ -i τ \mathbf{V_2} } · e^{ -i τ \mathbf{V_1} } \vec ψ(0) $$
 
 #### Trapezoidal Integration
 Recall that the Trotterization method required discretizing an integral into a sum, and doing so introduced subscripts into our operators:
 
-$$ \int_0^T \hat H(t) dt → \sum_{i=1}^r \hat H_i Δt $$
+$$ \int_0^T \hat H(t) dt → \sum_{i=1}^r \hat H_i τ $$
 
 We need to decide what $\hat H_i$ means!
 
@@ -142,11 +142,11 @@ Just think of the good-old Riemann sums you used when you were first learning wh
 We had _left_-handed sums, _right_-handed sums, and then a more symmetric _trapezoidal rule_.
 
 The left-handed sum would evaluate a function at the "left-handed" time point, ie. the earlier time for each step.
-In that case, $\hat H_i ≡ \hat H((i-1)Δt)$.
-The right-handed sum uses the "right-handed" time point, producing the somewhat-more-elegant definition $\hat H_i ≡ \hat H(iΔt)$.
+In that case, $\hat H_i ≡ \hat H((i-1)τ)$.
+The right-handed sum uses the "right-handed" time point, producing the somewhat-more-elegant definition $\hat H_i ≡ \hat H(iτ)$.
 Finally, the trapezoidal rule _averages_ the function at both time points:
 
-$$ \hat H_i ≡ \frac{1}{2} \left\[ \hat H((i-1)Δt) + \hat H(iΔt) \right] $$
+$$ \hat H_i ≡ \frac{1}{2} \left\[ \hat H((i-1)τ) + \hat H(iτ) \right] $$
 
 This one tends to be quite a bit more accurate, so it's the one we're going to use.
 (Like in Trotterization, there are higher-order formulae that peform significantly better with fewer $r$,
@@ -156,15 +156,15 @@ This one tends to be quite a bit more accurate, so it's the one we're going to u
 Now let's see what effect this has on our Trotterization method:
 
 $$\begin{array}{rl}
-  \vec ψ(t) &= e^{ -i Δt \mathbf{V_r} } … e^{ -i Δt \mathbf{V_2} } · e^{ -i Δt \mathbf{V_1} } \vec ψ(0) \\
-            &= e^{ -i \frac{Δt}{2} \left\[\mathbf{V}(T)+\mathbf{V}(T-Δt)\right\] } … e^{ -i \frac{Δt}{2} \left\[\mathbf{V}(2Δt)+\mathbf{V}(Δt)\right\] } · e^{ -i \frac{Δt}{2} \left\[\mathbf{V}(Δt)+\mathbf{V}(0)\right\] } \vec ψ(0) \\
-            &≈ \left( e^{ -i \frac{Δt}{2} \mathbf{V}(T) } · e^{ -i \frac{Δt}{2} \mathbf{V}(T-Δt) } \right) … \left( e^{ -i \frac{Δt}{2} \mathbf{V}(2Δt) } · e^{ -i \frac{Δt}{2} \mathbf{V}(Δt) } \right) · \left( e^{ -i \frac{Δt}{2} \mathbf{V}(Δt) } · e^{ -i \frac{Δt}{2} \mathbf{V}(0) } \right) \vec ψ(0) \\
-            &= e^{ -i \frac{Δt}{2} \mathbf{V}(T) } · e^{ -i Δt \mathbf{V}(T-Δt) } … e^{ -i Δt \mathbf{V}(2Δt) } · e^{ -i Δt \mathbf{V}(Δt) } · e^{ -i \frac{Δt}{2} \mathbf{V}(0) } \vec ψ(0) \\
+  \vec ψ(t) &= e^{ -i τ \mathbf{V_r} } … e^{ -i τ \mathbf{V_2} } · e^{ -i τ \mathbf{V_1} } \vec ψ(0) \\
+            &= e^{ -i \frac{τ}{2} \left\[\mathbf{V}(T)+\mathbf{V}(T-τ)\right\] } … e^{ -i \frac{τ}{2} \left\[\mathbf{V}(2τ)+\mathbf{V}(τ)\right\] } · e^{ -i \frac{τ}{2} \left\[\mathbf{V}(τ)+\mathbf{V}(0)\right\] } \vec ψ(0) \\
+            &≈ \left( e^{ -i \frac{τ}{2} \mathbf{V}(T) } · e^{ -i \frac{τ}{2} \mathbf{V}(T-τ) } \right) … \left( e^{ -i \frac{τ}{2} \mathbf{V}(2τ) } · e^{ -i \frac{τ}{2} \mathbf{V}(τ) } \right) · \left( e^{ -i \frac{τ}{2} \mathbf{V}(τ) } · e^{ -i \frac{τ}{2} \mathbf{V}(0) } \right) \vec ψ(0) \\
+            &= e^{ -i \frac{τ}{2} \mathbf{V}(T) } · e^{ -i τ \mathbf{V}(T-τ) } … e^{ -i τ \mathbf{V}(2τ) } · e^{ -i τ \mathbf{V}(τ) } · e^{ -i \frac{τ}{2} \mathbf{V}(0) } \vec ψ(0) \\
 \end{array}$$
 
 Unpacking the new terms in the exponentials via Trotterization, and being careful to keep all terms time-ordered,
   we discover that the trapezoidal rule asks us to perform a time evolution at all $r+1$ time points in our discrete grid,
-  but to treat the very first and last points as though the time-spacing $Δt$ were halved.
+  but to treat the very first and last points as though the time-spacing $τ$ were halved.
 Note that, while this derivation seems to incur some extra error from factoring the left- and right-handed contributions at each time-step,
   it does not affect the error-_scaling_ already implicit in the original Trotterization formula.
 
@@ -194,7 +194,7 @@ An unsophisticated benchmarking analysis indicates that Julia selects a fairly l
 `Direct` indicates "Direct Exponentiation" at each time step.
 It takes the Trotter time-evolution formula very literally.
 
-$$ \vec ψ(t) = e^{ -i Δt \mathbf{V_r} } … e^{ -i Δt \mathbf{V_2} } · e^{ -i Δt \mathbf{V_1} } \vec ψ(0) $$
+$$ \vec ψ(t) = e^{ -i τ \mathbf{V_r} } … e^{ -i τ \mathbf{V_2} } · e^{ -i τ \mathbf{V_1} } \vec ψ(0) $$
 
 Each of these matrix exponentials is individually calculated, using Julia's default matrix exponentiation.
 _Assuming_ Julia is implemented the way _I_ would have implemented it, it is equivalent to the following:
@@ -202,12 +202,12 @@ _Assuming_ Julia is implemented the way _I_ would have implemented it, it is equ
 - For each time point $t$, diagonalize $\mathbf{V_i} = \mathbf{U_{V_i}} · \mathbf{Λ_{V_i}} · \mathbf{U_{V_i}^†}$,
     where $\mathbf{U_{V_i}}$ is a unitary matrix of eigenvectors and $\mathbf{Λ_{V_i}}$ is a diagonal matrix of eigenvalues.
   This step is the bottleneck, costing $O(N^3)$ runtime.
-- Next, calculate $e^{-iΔt\mathbf{Λ_{V_i}}}$.
+- Next, calculate $e^{-iτ\mathbf{Λ_{V_i}}}$.
   If you like, this is the desired matrix exponential _in the eigenbasis_.
   Because $\mathbf{Λ_{V_i}}$ is diagonal, this step costs only $O(N)$ runtime.
 - Finally, return to the original basis by conjugating with $\mathbf{U_{V_i}}$, which involves an $O(N^3)$ matrix multiplication:
 
-$$ \mathbf{E_i} = \mathbf{U_{V_i}} · e^{-iΔt\mathbf{Λ_{V_i}}} · \mathbf{U_{V_i}^†} $$
+$$ \mathbf{E_i} = \mathbf{U_{V_i}} · e^{-iτ\mathbf{Λ_{V_i}}} · \mathbf{U_{V_i}^†} $$
 
 We have so far accumulated a total runtime of $O(rN^3)$ and the following formula:
 
@@ -258,7 +258,7 @@ The studious reader can research the method used [here](https://jutho.github.io/
 `Rotate` indicates "Rotating back and forth between the device and drive bases at each time step".
 It is a Trotterized method, but I don't want to work in matrix representation just yet:
 
-$$ |ψ(t)⟩ = e^{ -i Δt \hat V_I(t_r) } … e^{ -i Δt \hat V_I(t_2) } · e^{ -i Δt \hat V_I(t_1) } |ψ(0)⟩ $$
+$$ |ψ(t)⟩ = e^{ -i τ \hat V_I(t_r) } … e^{ -i τ \hat V_I(t_2) } · e^{ -i τ \hat V_I(t_1) } |ψ(0)⟩ $$
 
 but we will break each time step into device and drive components.
 It will turn out that the device components can be treated entirely _independent_ of time, and the drive components can be treated _qubit-wise_,
@@ -272,24 +272,24 @@ Conjugation by the unitary $e^{it_i \hat H_0}$ is in essence representing the dr
 Substituting this into our Trotterized time evolution, the conjugating terms (because they are unitary) can pass _out_ of the enveloping exponential:
 
 $$\begin{array}{rl}
-  |ψ(t)⟩ &= \exp\left\[ e^{it_r \hat H_0} (-iΔt\hat V(t_r)) e^{-it_r \hat H_0}\right\] … \exp\left\[ e^{it_2 \hat H_0} (-iΔt\hat V(t_2)) e^{-it_2 \hat H_0}\right\] · \exp\left\[ e^{it_1 \hat H_0} (-iΔt\hat V(t_1)) e^{-it_1 \hat H_0}\right\] |ψ(0)⟩ \\
-         &= e^{it_r \hat H_0} · \exp\left\[ -i Δt \hat V(t_r) \right\] · \left( e^{-it_r \hat H_0} · e^{it_{r-1} \hat H_0} \right) · \exp\left\[ -i Δt \hat V(t_{r-1}) \right\] … \exp\left\[ -i Δt \hat V(t_2) \right\] · \left( e^{-it_2 \hat H_0} · e^{it_1 \hat H_0} \right) · \exp\left\[ -i Δt \hat V(t_1) \right\] · e^{-it_1 \hat H_0} |ψ(0)⟩ \\
-         &= e^{it_r \hat H_0} · \exp\left\[ -i Δt \hat V(t_r) \right\] · e^{-i(t_r - t_{r-1}) \hat H_0} · \exp\left\[ -i Δt \hat V(t_{r-1}) \right\] … \exp\left\[ -i Δt \hat V(t_2) \right\] · e^{-i(t_2 - t_1) \hat H_0} · \exp\left\[ -i Δt \hat V(t_1) \right\] · e^{-it_1 \hat H_0} |ψ(0)⟩ \\
-         &= e^{it_r \hat H_0} · \exp\left\[ -i Δt \hat V(t_r) \right\] · e^{-iΔt \hat H_0} · \exp\left\[ -i Δt \hat V(t_{r-1}) \right\] … \exp\left\[ -i Δt \hat V(t_2) \right\] · e^{-iΔt \hat H_0} · \exp\left\[ -i Δt \hat V(t_1) \right\] · e^{-it_1 \hat H_0} |ψ(0)⟩
+  |ψ(t)⟩ &= \exp\left\[ e^{it_r \hat H_0} (-iτ\hat V(t_r)) e^{-it_r \hat H_0}\right\] … \exp\left\[ e^{it_2 \hat H_0} (-iτ\hat V(t_2)) e^{-it_2 \hat H_0}\right\] · \exp\left\[ e^{it_1 \hat H_0} (-iτ\hat V(t_1)) e^{-it_1 \hat H_0}\right\] |ψ(0)⟩ \\
+         &= e^{it_r \hat H_0} · \exp\left\[ -i τ \hat V(t_r) \right\] · \left( e^{-it_r \hat H_0} · e^{it_{r-1} \hat H_0} \right) · \exp\left\[ -i τ \hat V(t_{r-1}) \right\] … \exp\left\[ -i τ \hat V(t_2) \right\] · \left( e^{-it_2 \hat H_0} · e^{it_1 \hat H_0} \right) · \exp\left\[ -i τ \hat V(t_1) \right\] · e^{-it_1 \hat H_0} |ψ(0)⟩ \\
+         &= e^{it_r \hat H_0} · \exp\left\[ -i τ \hat V(t_r) \right\] · e^{-i(t_r - t_{r-1}) \hat H_0} · \exp\left\[ -i τ \hat V(t_{r-1}) \right\] … \exp\left\[ -i τ \hat V(t_2) \right\] · e^{-i(t_2 - t_1) \hat H_0} · \exp\left\[ -i τ \hat V(t_1) \right\] · e^{-it_1 \hat H_0} |ψ(0)⟩ \\
+         &= e^{it_r \hat H_0} · \exp\left\[ -i τ \hat V(t_r) \right\] · e^{-iτ \hat H_0} · \exp\left\[ -i τ \hat V(t_{r-1}) \right\] … \exp\left\[ -i τ \hat V(t_2) \right\] · e^{-iτ \hat H_0} · \exp\left\[ -i τ \hat V(t_1) \right\] · e^{-it_1 \hat H_0} |ψ(0)⟩
 \end{array}$$
 
-Aside from the very first and last time steps, the device Hamiltonian $H_0$ is always treated with the same "ligand" operator $e^{-iΔt \hat H_0}$.
+Aside from the very first and last time steps, the device Hamiltonian $H_0$ is always treated with the same "ligand" operator $e^{-iτ \hat H_0}$.
 Let $\mathbf{H_0}$ be the matrix representation of our device Hamiltonian in the _qubit basis_.
 The matrix exponential, as described in the `Direct` method, is computed via the following steps:
 - Diagonalize $\mathbf{H_0} = \mathbf{U_0} · \mathbf{Λ_0} · \mathbf{U_0^†}$,
     where $\mathbf{U_0}$ is a unitary matrix of eigenvectors and $\mathbf{Λ_0}$ is a diagonal matrix of eigenvalues.
   This step is the bottleneck, costing $O(N^3)$ runtime.
-- Next, calculate $e^{-iΔt\mathbf{Λ_0}}$.
+- Next, calculate $e^{-iτ\mathbf{Λ_0}}$.
   This is in fact the ligand operator computed in the in the _device basis_.
   Because $\mathbf{Λ_0}$ is diagonal, this step costs only $O(N)$ runtime.
 - Finally, rotate back to the qubit basis by conjugating with $\mathbf{U_0}$.
 
-$$ \mathbf{L_0} = \mathbf{U_0} · e^{-iΔt\mathbf{Λ_0}} · \mathbf{U_0^†} $$
+$$ \mathbf{L_0} = \mathbf{U_0} · e^{-iτ\mathbf{Λ_0}} · \mathbf{U_0^†} $$
 
 Like in the `Direct` method, calculating this matrix exponential has a runtime of $O(N^3)$.
 _Unlike_ the `Direct` method, this is the _only_ time we need to perform an $O(N^3)$ operation!
@@ -310,10 +310,10 @@ Then our qubit-wise drive Hamiltonian is represented by:
 
 $$ \mathbf{V^{(q)}}(t_i) = Ω_q (e^{iν_q t} \mathbf{a} + e^{-iν_q t} \mathbf{a^†}) $$
 
-Let $\mathbf{D^{(q)}}(t_i)$ be the matrix exponential $e^{-iΔt \mathbf{V^{(q)}}(t_i)}$.
-The full-body operator $e^{-i Δt \hat V(t_i)}$ is therefore representable as the matrix product operator $\mathbf{D}(t_i)$:
+Let $\mathbf{D^{(q)}}(t_i)$ be the matrix exponential $e^{-iτ \mathbf{V^{(q)}}(t_i)}$.
+The full-body operator $e^{-i τ \hat V(t_i)}$ is therefore representable as the matrix product operator $\mathbf{D}(t_i)$:
 
-$$ e^{-i Δt \hat V} → \mathbf{D} ≡ \mathbf{D^{(q)}} ⊗ … \mathbf{D^{(2)}} ⊗ \mathbf{D^{(1)}} $$
+$$ e^{-i τ \hat V} → \mathbf{D} ≡ \mathbf{D^{(q)}} ⊗ … \mathbf{D^{(2)}} ⊗ \mathbf{D^{(1)}} $$
 
 Now we are left with two questions:
 1. How do we apply the matrix product operator $\mathbf{D}(t_i)$ to the statevector $\vec ψ$?
@@ -355,7 +355,7 @@ Consider the diagonalization of $\mathbf{V^{(q)}}$.
 
 $$ \mathbf{V^{(q)}}(t) = \mathbf{U_q}(t) \mathbf{Λ_q}(t) \mathbf{U_q^†}(t) $$
 
-We'd really _like_ to be able to compute $\mathbf{D^{(q)}} = e^{-iΔt \mathbf{V^{(q_)}}}$ as $\mathbf{U_q} e^{-iΔt \mathbf{Λ_q}(t)} \mathbf{U_q^†}$,
+We'd really _like_ to be able to compute $\mathbf{D^{(q)}} = e^{-iτ \mathbf{V^{(q_)}}}$ as $\mathbf{U_q} e^{-iτ \mathbf{Λ_q}(t)} \mathbf{U_q^†}$,
   where $\mathbf{U_q}$ is independent of time.
 The diagonal $\mathbf{Λ_q}(t)$ would presumably be calculable in $O(m)$ runtime, as would its matrix exponential,
   and then conjugation with $\mathbf{U_q}$ would give $\mathbf{D^{(q)}}$ in just $O(m^2)$ time.
@@ -367,7 +367,7 @@ Then we can "Trotterize" to evaluate the matrix exponential.
 Perhaps this will remove time-dependence from the eigenvectors?
 
 Yes, it will work, but careful!
-We do not want to evaluate the matrix exponential of a matrix like $e^{-iz Δt \mathbf{a}}$, because $\mathbf{a}$ _is not Hermitian_.
+We do not want to evaluate the matrix exponential of a matrix like $e^{-iz τ \mathbf{a}}$, because $\mathbf{a}$ _is not Hermitian_.
 Moreover, $\mathbf{a}$ and $\mathbf{a^†}$ do not commute, so the $\mathbf{D^{(q)}}$ resulting from Trotterization will _not be unitary_:
   our time evolution will not preserve the norm of the statevector, resulting in numerical instability.
 Therefore, we will re-cast our problem into a different pair of operators:
@@ -391,10 +391,10 @@ $$\begin{array}{rl}
   \mathbf{V^{(q)}}(t) &= x_q(t) \mathbf{Q} + y_q(t) \mathbf{P} \\
                x_q(t) &≡ \Re ( Ω_q e^{iν_q t} ) \\
                y_q(t) &≡ \Im ( Ω_q e^{iν_q t} ) \\
-\mathbf{D^{(q)}}(t) &≡ e^{-iΔt \mathbf{V^{(q)}} } \\
-                    &= e^{-iΔt (x_q(t) \mathbf{Q} + y_q(t) \mathbf{P}) } \\
-                    &≈ e^{-i x_q(t) Δt \mathbf{Q}} · e^{-i y_q(t) Δt \mathbf{P}} \\
-                    &= \mathbf{U_Q} · e^{-i x_q(t) Δt \mathbf{Λ}} · \mathbf{U_Q^†} · \mathbf{U_P} · e^{-i y_q(t) Δt \mathbf{Λ}} · \mathbf{U_P^†}
+\mathbf{D^{(q)}}(t) &≡ e^{-iτ \mathbf{V^{(q)}} } \\
+                    &= e^{-iτ (x_q(t) \mathbf{Q} + y_q(t) \mathbf{P}) } \\
+                    &≈ e^{-i x_q(t) τ \mathbf{Q}} · e^{-i y_q(t) τ \mathbf{P}} \\
+                    &= \mathbf{U_Q} · e^{-i x_q(t) τ \mathbf{Λ}} · \mathbf{U_Q^†} · \mathbf{U_P} · e^{-i y_q(t) τ \mathbf{Λ}} · \mathbf{U_P^†}
 \end{array}$$
 
 Here is a formula which permits us to calculate $\mathbf{D^{(q)}}(t)$ using pre-diagonalized matrices!
@@ -418,8 +418,8 @@ In other words, there is no reason whatsoever to use the `Prediag` method over `
 One last note: the code permits a keyword argument `suzukiorder` which can be 0, 1, or 2.
 `suzukiorder=2` uses one of those higher-order product formulae I've alluded to a couple times;
   we can definitely use it here because we're factoring operators corresponding to the same time; the time-ordering operator won't interfere.
-Personally I like `suzukiorder=2` a lot because it's simple, symmetric, and drops Trotter error by another degree ( $O(Δt^2)→O(Δt^3)$ ),
-  but the fact is since the Trotter time evolution has $O(Δt^2)$ error, it doesn't really make much difference.
+Personally I like `suzukiorder=2` a lot because it's simple, symmetric, and drops Trotter error by another degree ( $O(τ^2)→O(τ^3)$ ),
+  but the fact is since the Trotter time evolution has $O(τ^2)$ error, it doesn't really make much difference.
 The `suzukiorder=0` option is, however, a bit more interesting.
 To be clear, there isn't any such thing as a 0-order product formula; this is just short-hand for a related technique:
 
