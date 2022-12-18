@@ -3,3 +3,4 @@
 docs/build/
 deprecated/
 script/_*
+tmp*
