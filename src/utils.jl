@@ -20,25 +20,31 @@ function transform!(
     x .= mul!(_x, A, x)
 end
 
-transform!(x::Vector{<:Number}, A::Matrix{<:Number}) = transform!(
+transform!(x::Vector{<:Number}, A::AbstractMatrix{<:Number}) = transform!(
     x, A, Vector{eltype(x)}(undef, length(x))
 )
 
 """
-    a_matrix(m::Int=2)
+    braket(
+        φ::Vector{<:Number}, A::Matrix{<:Number}, ψ::Vector{T}[, _ψ::Vector{T}]
+    ) where T <: Number
 
-Matrix representation of the bosonic annihilation operator on a single qubit.
+Calculate the scalar quantity ⟨φ|A|ψ⟩.
 
-Note that the matrix representation must be truncated to `m` levels.
+`_ψ` is a pre-allocated "work variable" storing the intermediate result A|ψ⟩,
+    so its dimension should match that of ψ.
 
 """
-function a_matrix(m::Integer=2)
-    a = zeros((m,m))
-    for i ∈ 1:m-1
-        a[i,i+1] = √i               # BOSONIC ANNIHILATION OPERATOR
-    end
-    return a
+function braket(
+    φ::Vector{<:Number}, A::Matrix{<:Number}, ψ::Vector{T}, _ψ::Vector{T}
+) where T <: Number
+    mul!(_ψ, A, ψ)
+    return σ' * _ψ
 end
+
+braket(φ::Vector{<:Number}, A::Matrix{<:Number}, ψ::Vector{<:Number}) = braket(
+    φ, A, ψ, Vector{eltype(ψ)}(undef, length(ψ))
+)
 
 """
     on(op::Matrix{<:Number}, q::Int, n::Int)
@@ -120,6 +126,172 @@ function kron_concat(op::Matrix{<:Number}, n::Integer)
 end
 
 
+"""
+    qubitspace(
+        ψ::Vector{ComplexF64},              # `m`-LEVEL STATEVECTOR
+        n::Integer;                         # NUMBER OF QUBITS
+
+        # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
+        N = length(ψ),                      # SIZE OF STATEVECTOR
+        m = round(Int, N^(1/n)),            # NUMBER OF LEVELS ON EACH QUBIT
+
+        # PRE-ALLOCATIONS (for those that want every last drop of efficiency...)
+        ψ2= Vector{ComplexF64}(undef, 2^n), # 2-LEVEL STATEVECTOR
+        z = Vector{Bool}(undef, n),         # BITSTRING VECTOR
+    )
+
+Project an `m`-level system of `n` qubits onto a 2-level system of `n` qubits.
+
+The resulting statevector is *not* normalized (you'll probably want to do so).
+
+The value of `m` is inferred from the length of `ψ`.
+
+"""
+function qubitspace(
+    ψ::Vector{T},                       # `m`-LEVEL STATEVECTOR
+    n::Integer;                         # NUMBER OF QUBITS
+
+    # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
+    N = length(ψ),                      # SIZE OF STATEVECTOR
+    m = round(Int, N^(1/n)),            # NUMBER OF LEVELS ON EACH QUBIT
+
+    # PRE-ALLOCATIONS (for those that want every last drop of efficiency...)
+    ψ2= Vector{T}(undef, 2^n),          # 2-LEVEL STATEVECTOR
+    z = Vector{Bool}(undef, n),         # BITSTRING VECTOR
+) where T <: Number
+    # SELECT ELEMENTS OF ψ WITH ONLY 0, 1 VALUES
+    for i2 in eachindex(ψ2)
+        digits!(z, i2-1, base=2)                        # FILL z WITH i2's BITSTRING
+        i = 1+foldr((a,b) -> muladd(m,b,a), z, init=0)  # PARSE z AS BASE `m` STRING
+        ψ2[i2] = ψ[i]
+    end
+
+    return ψ2
+end
+
+#= TODO: We can generally transmute any m-level statevector to an m'-level statevector.
+
+`qubitspace` method is easily generalized to arbitrary m' when m > m'. Unnormalized.
+When m' > m, start with all zeros, and then copy in values you have. Normalized.
+    Latter is basically a 1D version of `extendoperator` below.
+
+=#
+
+function extendoperator(
+    A::AbstractMatrix,      # OPERATOR
+    n::Integer,             # NUMBER OF QUBITS
+    m::Integer;             # TARGET NUMBER OF LEVELS ON EACH QUBIT
+
+    # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
+    N = m^n,                            # SIZE OF EXTENDED HILBERT SPACE
+    N0 = size(A,1),                     # SIZE OF INITIAL HILBERT SPACE
+    m0 = round(Int, N0^(1/n)),          # INITIAL NUMBER OF LEVELS ON EACH QUBIT
+
+    # PRE-ALLOCATIONS (for those that want every last drop of efficiency...)
+    B = zeros(eltype(A), (N,N)),        # EXTENDED OPERATOR (STARTS WITH ZEROS!)
+    imap = nothing,                     # MAP FROM BASE-m0 INDICES TO BASE-m INDICES
+)
+    if imap === nothing
+        z = Vector{Int}(undef, n)       # BITSTRING VECTOR
+        imap = Vector{Int}(undef, N0)   # MAP FROM BASE-m0 INDICES TO BASE-m INDICES
+        for i in 1:N0
+            digits!(z, i-1, base=m0)                    # FILL z WITH i's BASE `m0` STRING
+            imap[i] = 1+foldr((a,b)->muladd(m,b,a), z, init=0)# PARSE z AS BASE `m` STRING
+        end
+    end
+
+    # COPY VALUES OF A INTO B
+    for i in 1:N0; for j in 1:N0
+        B[imap[i],imap[j]] = A[i,j]
+    end; end
+
+    return B
+end
+
+#= TODO: I think there should be a well-defined `shrinkoperator` method also. =#
+
+
+"""
+    projector(n::Integer, m::Integer, m0::Integer)
+
+Project a Hilbert space of `n` `m0`-level qubits onto that of `n` `m`-level qubits
+
+Returns an (`n^m`, `n^m0`) shaped matrix `Π`.
+To perform the projection on a vector, use ψ ← Πψ.
+To perform the projection on a matrix, use A ← ΠAΠ'.
+
+"""
+function projector(n::Integer, m::Integer, m0::Integer)
+    # TODO: Pre-allocations
+    # IT'S EASIER TO CALCULATE PROJECTOR FROM SMALLER SPACE TO LARGER SPACE
+    if m < m0; return projector(n, m0, m)'; end     # NOTE THE ADJOINT ' OPERATOR
+
+    z = Vector{Int}(undef, n)       # PRE-ALLOCATION TO STORE BASE-m0 DECOMPOSITIONS
+    N  = m^n; N0 = m0^n             # FULL HILBERT SPACE DIMENSIONS
+    Id= Matrix{Bool}(I, N, N)       # IDENTITY MATRIX IN LARGER HILBERT SPACE
+    Π = Matrix{Bool}(undef, N, N0)  # PROJECTOR MATRIX
+    j = 1                           # ITERATES COLUMNS OF PROJECTOR
+
+    for i ∈ 1:N                     # FILL PROJECTOR WITH SELECT COLUMNS FROM IDENTITY
+        digits!(z, i-1, base=m)         # DECOMPOSE INDEX INTO LARGER BASE
+        if any(z .>= m0); continue; end # SKIP INDEX IF ABSENT IN SMALLER SPACE
+        Π[:,j] .= Id[:,i]               # COPY COLUMN OF IDENTITY MATRIX
+        j += 1                          # ADVANCE COLUMN INDEX
+    end
+
+    # for i ∈ 1:N                     # FILL PROJECTOR WITH SELECT COLUMNS FROM IDENTITY
+    #     digits!(z, i-1, base=m)         # DECOMPOSE INDEX INTO LARGER BASE
+    #     if any(z .>= m0); continue; end # SKIP INDEX IF ABSENT IN SMALLER SPACE
+    #     j = 1+foldr((a,b)->muladd(m0,b,a), reverse(z), init=0)
+    #     Π[:,j] .= Id[:,i]               # COPY COLUMN OF IDENTITY MATRIX
+    # end
+
+
+    return Π
+end
+
+
+
+
+
+
+"""
+    expectation(A::Matrix{ComplexF64}, ψ::Vector{ComplexF64})
+
+Evaluate the expectation value ⟨ψ|A|ψ⟩.
+
+`A` and `ψ` should have compatible dimensions.
+
+"""
+function expectation(
+    A::AbstractMatrix{<:Number},
+    ψ::Vector{T};
+
+    # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
+    N = length(ψ),                          # SIZE OF STATEVECTOR
+
+    # PRE-ALLOCATIONS (for those that want every last drop of efficiency...)
+    tmpV = Vector{T}(undef, N),    # FOR MATRIX-VECTOR MULTIPLICATION
+) where T <: Number
+    mul!(tmpV, A, ψ)
+    return ψ' * tmpV
+end
+
+"""
+    a_matrix(m::Int=2)
+
+Matrix representation of the bosonic annihilation operator on a single qubit.
+
+Note that the matrix representation must be truncated to `m` levels.
+
+"""
+function a_matrix(m::Integer=2)
+    a = zeros((m,m))
+    for i ∈ 1:m-1
+        a[i,i+1] = √i               # BOSONIC ANNIHILATION OPERATOR
+    end
+    return a
+end
 
 """
     algebra(

@@ -48,6 +48,24 @@ Do something like `_` prefix to indicate it's an allocation,
 
 #= TODO: I/O and QubitApply can be :symbols instead of types, I think. =#
 
+#= TODO: Methods with different dependencies should be allocated to different modules. =#
+
+#= TODO: Gradient calculation turned out to be more elegant to put extra ligand at start,
+            rather than end. Code should be consistent, so switch 'em around here.
+=#
+
+#= TODO: Improve readability by relegating auxiliary "constant" parameters to a single Dict,
+        whose keys are the :symbol corresponding to the original name?
+
+    I think we can even do this for the evolve! parameters:
+        dict defaults to empty but can be passed as partially full
+        we start by calculating values that are empty.
+        But no, using values isn't quite as readable then.
+        That's not a big deal in auxiliary method,
+            but evolve! itself should be as readable as possible.
+    Moreover, user can already use the exact dictionary I have in mind by dereferencing.
+=#
+
 """
     evolve(ψI, args...; kwargs...)
 
@@ -561,10 +579,10 @@ end
         a  = nothing,                       # SINGLE-QUBIT ANNIHILATION OPERATOR
 
         # PRE-ALLOCATIONS (for those that want every last drop of efficiency...)
-        tmpV = Vector{ComplexF64}(undef, N),                # FOR MATRIX-VECTOR MULTIPLICATION
+        tmpV = Vector{ComplexF64}(undef, N),    # FOR MATRIX-VECTOR MULTIPLICATION
         tmpM_ = [Matrix{ComplexF64}(undef, m,m) for q ∈ 1:n],   # QUBIT-WISE DRIVE OPERATORS
-        tmpK_ = nothing,                                    # FOR APPLYING OPERATORS
-                                                        # (default depends on `qubitapplymode`)
+        tmpK_ = nothing,                        # FOR APPLYING OPERATORS
+                                                    # (default depends on `qubitapplymode`)
     )
 
 Trotterize the time evolution operator,
@@ -614,10 +632,10 @@ function evolve!(
     a  = nothing,                       # SINGLE-QUBIT ANNIHILATION OPERATOR
 
     # PRE-ALLOCATIONS (for those that want every last drop of efficiency...)
-    tmpV = Vector{ComplexF64}(undef, N),                # FOR MATRIX-VECTOR MULTIPLICATION
+    tmpV = Vector{ComplexF64}(undef, N),    # FOR MATRIX-VECTOR MULTIPLICATION
     tmpM_ = [Matrix{ComplexF64}(undef, m,m) for q ∈ 1:n],   # QUBIT-WISE DRIVE OPERATORS
-    tmpK_ = nothing,                                    # FOR APPLYING OPERATORS
-                                                    # (default depends on `qubitapplymode`)
+    tmpK_ = nothing,                        # FOR APPLYING OPERATORS
+                                                # (default depends on `qubitapplymode`)
 )
     ######################################################################################
     #                            PRELIMINARY CALCULATIONS
@@ -676,7 +694,7 @@ function evolve!(
     if iobasis isa QubitBasis;  Utils.transform!(ψ, UD, tmpV);  end
 end
 
-""" Auxiliary function for Prediag `evolve!`. """
+""" Auxiliary function for Rotate `evolve!`. """
 function _step(ψ, t, Δt, ::Type{Rotate}, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
     ######################################################################################
     #                                 SINGLE TIME STEP
@@ -706,7 +724,7 @@ function _step(ψ, t, Δt, ::Type{Rotate}, pulses, qubitapplymode, n, a, tmpV, t
         #= TODO: Write manual tensor contraction so you can control pre-allocations.
             I still don't really know what cache is doing,
                 but it's not doing everything it could.
-            Don't forget to change Prediag call also.
+            Don't forget to change Prediag and gradient calls also.
         =#
         ψ_ = reshape(ψ, tmpK_[1])   # *NOT* A COPY; MUTATIONS APPLY TO BOTH
         ψ_ .= ncon(
@@ -717,6 +735,12 @@ function _step(ψ, t, Δt, ::Type{Rotate}, pulses, qubitapplymode, n, a, tmpV, t
         )
         # ψ HAS ALREADY BEEN UPDATED, IN MUTATIONS OF ψ_
         return ψ
+        #= TODO: ψ is mutated in tensor mode but not in Kronecker mode.
+            This should not be the case, though it makes no difference
+            as long as users follow the contract to *not* call _methods.
+
+            Probably this "fix" can wait 'til after manual tensor contraction.
+        =#
     else
         error("Invalid `QubitApplyMode` object. (How did you manage that???)")
     end
@@ -757,12 +781,12 @@ end
         L  = nothing,                       # LIGAND (STATIC PROPAGATION) OPERATION
 
         # PRE-ALLOCATIONS (for those that want every last drop of efficiency...)
-        tmpV = Vector{ComplexF64}(undef, N),                # FOR MATRIX-VECTOR MULTIPLICATION
-        tmpD = Vector{ComplexF64}(undef, m),                # FOR QUBIT DRIVE DIAGONAL FACTORS
+        tmpV = Vector{ComplexF64}(undef, N),    # FOR MATRIX-VECTOR MULTIPLICATION
+        tmpD = Vector{ComplexF64}(undef, m),    # FOR QUBIT DRIVE DIAGONAL FACTORS
         tmpM_ = [Matrix{ComplexF64}(undef, m,m) for q ∈ 1:n],   # QUBIT-WISE DRIVE OPERATORS
-        tmpM = nothing,                                     # EXTRA, FOR `suzukiorder=2` ONLY
-        tmpK_ = nothing,                                    # FOR APPLYING OPERATORS
-                                                        # (default depends on `qubitapplymode`)
+        tmpM = nothing,                         # EXTRA, FOR `suzukiorder=2` ONLY
+        tmpK_ = nothing,                        # FOR APPLYING OPERATORS
+                                                    # (default depends on `qubitapplymode`)
     )
 
 Trotterize the time evolution operator,
@@ -836,12 +860,12 @@ function evolve!(
     L  = nothing,                       # LIGAND (STATIC PROPAGATION) OPERATION
 
     # PRE-ALLOCATIONS (for those that want every last drop of efficiency...)
-    tmpV = Vector{ComplexF64}(undef, N),                # FOR MATRIX-VECTOR MULTIPLICATION
-    tmpD = Vector{ComplexF64}(undef, m),                # FOR QUBIT DRIVE DIAGONAL FACTORS
+    tmpV = Vector{ComplexF64}(undef, N),    # FOR MATRIX-VECTOR MULTIPLICATION
+    tmpD = Vector{ComplexF64}(undef, m),    # FOR QUBIT DRIVE DIAGONAL FACTORS
     tmpM_ = [Matrix{ComplexF64}(undef, m,m) for q ∈ 1:n],   # QUBIT-WISE DRIVE OPERATORS
-    tmpM = nothing,                                     # EXTRA, FOR `suzukiorder=2` ONLY
-    tmpK_ = nothing,                                    # FOR APPLYING OPERATORS
-                                                    # (default depends on `qubitapplymode`)
+    tmpM = nothing,                         # EXTRA, FOR `suzukiorder=2` ONLY
+    tmpK_ = nothing,                        # FOR APPLYING OPERATORS
+                                                # (default depends on `qubitapplymode`)
 )
     ######################################################################################
     #                            PRELIMINARY CALCULATIONS
@@ -865,6 +889,18 @@ function evolve!(
     end; if outbasis === nothing
         outbasis = Utils.kron_concat(UQ, n)                         # DRIVE'S OUTPUT BASIS
     end; if L === nothing
+        #= TODO: in/outbasis products can be a tensor contraction
+
+        It's no doubt a nightmare figuring out how exactly to do it,
+            but it will noticeably improve overhead on the `Prediag` method
+            for very large systems.
+        Note this means:
+        1. `in_basis` and `outbasis` don't need to exist. Just use `UQ` and `UP` directly.
+        2. `L` can be calculated more efficiently:
+            Core L .= UD; rmul!(L,Diag..); L .= L * UD' (unavoidable extra allocation)
+            then contract!
+        3. Initial vector rotations can be tensored.
+        =#
         L = in_basis' * UD * Diagonal(exp.((-im*Δt)*ΛD)) * UD' * outbasis   # LIGAND OP.
     end; if tmpK_ === nothing
         tmpK_ = (
