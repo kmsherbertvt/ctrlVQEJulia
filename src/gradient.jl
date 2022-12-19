@@ -290,12 +290,6 @@ function _fillgradients!(∂Ω, i, σ, ψ, t_, τ, pulses,
 
         # CALCULATE GRADIENT
         σAψ = -im*τ * (σ' * tmpV)       # THE BRAKET ⟨σ|A|ψ⟩
-
-        # # TEMP: GLOBAL PHASE IS NOT GLOBAL THROUGH PROJECTION
-        # σAψ *= exp(-im*angle(tmpV[1]))
-        # σAψ *= exp(+im*angle(   σ[1]))
-
-
         ∂Ω[i,q] = σAψ + σAψ'            # THE GRADIENT ⟨σ|A|ψ⟩ + ⟨ψ|A|σ⟩
 
         # REPLACE QUBIT OPERATOR WITH IDENTITY

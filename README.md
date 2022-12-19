@@ -12,27 +12,23 @@ If you find anything unclear (eg.
 ), please feel free to complain or file a Github issue:
 I want this code to be accessible and understandable to anyone putting it to use.
 
-Presently, this code features several methods to evolve a wave-function in time given a specific set of pulses,
-but it does not yet implement any cost-function, gradient, or pulse optimization routines.
-They are coming!
-But in the meantime, consider Oinam Meitei's original [`ctrlq`](https://github.com/oimeitei/ctrlq) repository.
+The current code-base has a pretty well-tested evolution method,
+    and a working amplitude gradient signal method.
+
+The file `script/ctrlvqe_proofofconcept.jl` contains an in-depth tutorial on how to use these methods
+    to run a VQE experiment with square pulses.
 
 
 ## Dependencies
 
 Naturally, the Julia language is required to run the code contained in the `ctrlVQEJulia` repository.
 
-The following packages are used somewhere or another in the code:
-```
-Documenter
-Plots
-TensorOperations
-DifferentialEquations
-Polynomials
-SpecialMatrices
-```
+There are a whole bunch of packages used somewhere or another in the code.
+I've lost track of them...
+In the near future, this code base will be set up as a proper package,
+  with all dependencies listed in a configuration file.
 
-Julia will recognize each of these as available packages
+In the meantime, Julia will recognize all of the dependencies as available packages
   and offer to install them for you when you attempt to run the dependent code.
 
 ## Usage Tutorial

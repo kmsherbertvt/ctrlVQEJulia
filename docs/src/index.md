@@ -12,11 +12,12 @@ If you find anything unclear (eg.
 ), please feel free to complain or file a Github issue:
 I want this code to be accessible and understandable to anyone putting it to use.
 
-Presently, this code features several methods to evolve a wave-function in time given a specific set of pulses,
-but it does not yet implement any cost-function, gradient, or pulse optimization routines.
-They are coming!
-But in the meantime, consider Oinam Meitei's original [`ctrlq`](https://github.com/oimeitei/ctrlq) repository.
+The current code-base has a pretty well-tested evolution method,
+    and a working amplitude gradient signal method.
+
+The file `script/ctrlvqe_proofofconcept.jl` contains an in-depth tutorial on how to use these methods
+    to run a VQE experiment with square pulses.
 
 ```@contents
-Pages = ["utils.md", "device.md", "pulse.md", "evolve.md"]
+Pages = ["utils.md", "device.md", "pulse.md", "evolve.md", "gradients.md"]
 ```

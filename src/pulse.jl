@@ -2,6 +2,8 @@
 
 module Pulses
 
+import ..Utils
+
 """
 An abstract representation of the microwave pulse applied to a qubit.
 
@@ -85,11 +87,18 @@ BasicSquarePulse(duration::Float64, frequency::Float64, amplitude::Float64) = (
 
 frequency(pt::BasicSquarePulse, t::Float64) = pt.frequency
 
-amplitude(pt::BasicSquarePulse, t::Float64) = (
-    # DETERMINE WHICH AMPLITUDE TO TAKE, BASED ON WHERE `t` FALLS IN `timesteps`
-    ix = findfirst(steptime -> t < steptime, pt.steptimes);
-    # IF `ix` IS `nothing`, `t` IS AFTER ALL `timesteps`
-    return isnothing(ix) ? pt.amplitudes[end] : pt.amplitudes[ix]
+# amplitude(pt::BasicSquarePulse, t::Float64) = (
+#     # DETERMINE WHICH AMPLITUDE TO TAKE, BASED ON WHERE `t` FALLS IN `timesteps`
+#     ix = findfirst(steptime -> t < steptime, pt.steptimes);
+#     # IF `ix` IS `nothing`, `t` IS AFTER ALL `timesteps`
+#     return isnothing(ix) ? pt.amplitudes[end] : pt.amplitudes[ix]
+# )
+
+amplitude(pt::BasicSquarePulse, t::Float64) = sum(
+    pt.amplitudes[i] * Utils.interval(t,
+        get(pt.steptimes, i-1, 0),          #  LEFT TIME WINDOW (s[0] is implicitly 0)
+        get(pt.steptimes, i, pt.duration),  # RIGHT TIME WINDOW (s[W] is implicitly T)
+    ) for i in eachindex(pt.amplitudes)
 )
 
 end # END MODULE

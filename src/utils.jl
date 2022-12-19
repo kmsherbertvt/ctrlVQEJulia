@@ -4,6 +4,17 @@ module Utils
 
 import LinearAlgebra: kron, I, eigen, Eigen, Hermitian, norm, mul!
 
+"""
+    basisvector(N, i)
+
+Construct the standard basis vector e⃗ᵢ.
+
+"""
+function basisvector(N, i)
+    e = zeros(Bool, N)
+    e[i] = 1
+    return e
+end
 
 """
     transform!(x::Vector{T}, A::Matrix{<:Number}[, _x::Vector{T}]) where T <: Number
@@ -406,5 +417,57 @@ Calculates ``1 - |⟨ψ0|ψ⟩|^2``.
 
 """
 infidelity(ψ,φ) = 1 - abs2(ψ'*φ)
+
+
+
+"""
+    heaviside(t)
+
+The heaviside step function:
+
+            { 0     t < 0
+    Θ(t) =  { 1/2   t = 0
+            { 1     t > 0
+
+"""
+function heaviside(t)
+    return (sign(t) + 1) / 2
+end
+
+"""
+    interval(t, a, b)
+
+An interval function, which gives 0 when t is outside [a,b] and 1 inside.
+
+This function is implemented with heaviside step-functions,
+    so that 1/2 is returned when t is on the bounds.
+
+"""
+function interval(t, a, b)
+    return heaviside(t-a) - heaviside(t-b)
+end
+
+"""
+    diracdelta(t, τ)
+
+An approximation of the Dirac delta distribution, under a finite step-size τ.
+
+The essential property of the Dirac delta is:
+
+    ∫dt δ(t) = 1
+
+    when the bounds of the integral include 0.
+
+Under a finite step-size, this changes to:
+
+    ∑ τ·δ(t) = 1
+
+    when the bounds of the sum would include t=0.
+
+"""
+function diracdelta(t, τ)
+    return interval(t, -τ/2, τ/2) / τ
+end
+
 
 end # END MODULE

@@ -9,11 +9,8 @@ The goal of the interface is to permit evolution and gradient algorithms
 You should not hesitate to define your own struct extending `PulseTemplate`
     to accommodate whatever parameterizations you are studying.
 
-TODO: haven't actually thought too much yet how to interface with a gradient algorithm.
-It might be worth including "gradient" methods for amplitude and frequency some day.
-They could default to a stock finite difference,
-    but researchers can override the methods for their particular implementations
-    to get more analytical results.
+In the near future, the framework will be extended to include
+    parametric pulse construction, amplitude, and frequency gradients.
 
 ```@docs
 PulseTemplate

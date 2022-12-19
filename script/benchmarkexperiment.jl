@@ -3,17 +3,17 @@
 rundata  = true
 plotdata = true
 
-filename = "benchmark.11_17_2022.external"
+filename = "benchmark.11_18_2022.external"
 modes = [
     0,  # ODE
     1,  # DIRECT
     2,  # LANCZOS
     3,  # ROTATE (Kronec)
-    4,  # ROTATE (Tensor)
-    5,  # PREDIAG (Kronec, order=1)
-    7,  # PREDIAG (Kronec, order=2)
-    6,  # PREDIAG (Tensor, order=1)
-    8,  # PREDIAG (Tensor, order=2)
+    # 4,  # ROTATE (Tensor)
+    # 5,  # PREDIAG (Kronec, order=1)
+    # 7,  # PREDIAG (Kronec, order=2)
+    # 6,  # PREDIAG (Tensor, order=1)
+    # 8,  # PREDIAG (Tensor, order=2)
 ]
 
 m_ = [2,3]
