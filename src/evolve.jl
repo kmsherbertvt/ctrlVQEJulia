@@ -616,6 +616,7 @@ function evolve!(
     iobasis::IOBasisMode = DeviceBasis(),
     numsteps::Integer = 2000,
     qubitapplymode::QubitApplyMode = Kronec(),
+    callback = nothing,                 # TODO: Formalize this.
 
     # INFERRED VALUES (relatively fast, but pass them in to minimize allocations)
     N = length(ψ),                      # SIZE OF STATEVECTOR
@@ -671,15 +672,18 @@ function evolve!(
 
     # APPLY FIRST QUBIT DRIVES  (use Δt/2 for first and last time step)
     ψ .= _step(ψ, t_[1], Δt/2, Rotate, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
+    callback !== nothing && callback(1, t_[1], ψ)
 
     for i ∈ 2:numsteps
         Utils.transform!(ψ, V, tmpV)        # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
         ψ .= _step(ψ, t_[i], Δt, Rotate, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
+        callback !== nothing && callback(i, t_[i], ψ)
     end
     Utils.transform!(ψ, V, tmpV)        # CONNECT QUBIT DRIVES WITH THE DEVICE ACTION
 
     # APPLY LAST PULSE DRIVES   (use Δt/2 for first and last time step)
     ψ .= _step(ψ, t_[end], Δt/2, Rotate, pulses, qubitapplymode, n, a, tmpV, tmpM_, tmpK_)
+    callback !== nothing && callback(length(t_), t_[end], ψ)
 
     # LAST STEP: exp(𝒊 HD t[numsteps])), ie. exp(-𝒊 HD T)
     Utils.transform!(ψ, UD', tmpV)      # ROTATE INTO DEVICE BASIS
