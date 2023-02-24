@@ -57,6 +57,8 @@ import ..Molecules                                                  # CHEMISTRY 
 #                               CHEMISTRY SETUP
 #=  Now let's define the problem. What system are we trying to solve?                   =#
 
+#= TEMP  --- SKIP OVER THE pyscf PARTS
+
 # CONSTRUCT A SECOND-QUANTIZED REPRESENTATION OF THE TARGET MOLECULE
 geometry = Molecules.H2_geometry(0.7414)    # THE NUMBER IS THE ATOMIC SEPARATION
 molecule = Molecules.Molecule(geometry)
@@ -81,9 +83,18 @@ molecule = Molecules.Molecule(geometry)
 
 # CONSTRUCT THE FERMIONIC HAMILTONIAN IN THE COMPUTATIONAL BASIS
 H = Molecules.molecular_hamiltonian(molecule)
+n = molecule.n
+
+=#
+
+# LOAD THE HAMILTONIAN FROM AN `.npy` FILE
+using NPZ
+H = npzread("matrix/h215.npy")
+n = round(Int, log2(size(H,1)))
+
 
 # INITIAL KET |1100⟩
-init_ket = "1100"
+init_ket = "1"^(n÷2) * "0"^(n÷2)
     #= Later on, we'll initialize a statevector |ψ0⟩ so that
         ⟨z|ψ0⟩=1 if |z⟩ is |init_ket⟩, and ⟨z|ψ0⟩=0 otherwise.
 
@@ -101,12 +112,8 @@ init_ket = "1100"
 #                                  PROBLEM SPECS
 #=  Here we'll define a bunch of variables that will be used throughout.                =#
 
-# THE NUMBER OF QUBITS NEEDED IN OUR CALCULATION
-n = molecule.n
-    #= If you manually loaded your own Hamiltonian matrix, assign this manually. =#
-
 # THE NUMBER OF MODES CONSIDERED FOR EACH TRANSMON
-m = 3
+m = 2
     #= Note the distinction:
         In a digital quantum computation, every qubit has two levels,
             and it's easy(ish) to map each qubit to the fermionic electron problem.
@@ -515,15 +522,6 @@ Gradients.gradientsignal(ψ0, pulses, device, O; gradient_kwargs...) # GRADIENT 
 # # #
 plot(Ω_plots, ∇Ω_plots, layout=(1,2))   # COMBINE PLOTS INTO ONE
 gui()                                   # *DISPLAY* PLOTS
-
-
-# TEMP: DEBUGGING s DERIVATIVES
-using FiniteDifferences
-function ng!(G,x)
-    G .= grad(central_fdm(2,1), f, x)[1]
-end
-
-
 
 # RUN THE OPTIMIZATION
 _, x = lbfgsb(f, g!, vec(x0), lb=vec(lbounds), ub=vec(ubounds),
