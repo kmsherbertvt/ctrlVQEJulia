@@ -94,6 +94,45 @@ struct Transmon <: Device
 end
 
 """
+    Transmon(
+        ω::AbstractVector{Float64},
+        δ::AbstractVector{Float64},
+        G::AbstractMatrix{Float64},
+        n::Integer=length(ω),
+    )
+
+Alternate constructor: feed in coupling map as a symmetric matrix.
+"""
+function Transmon(
+    ω::AbstractVector{Float64},
+    δ::AbstractVector{Float64},
+    G::AbstractMatrix{Float64},
+    n::Integer=length(ω),
+)
+    # EXTRACT gmap FROM UPPER-LEFT TRIANGLE
+    gmap = Dict{QubitCouple,Float64}()
+    for p in 2:n; for q in p+1:n
+        gmap[QubitCouple(p,q)] = G[p,q]
+    end; end
+    return Transmon(ω,δ,gmap,n)
+end
+
+"""
+    getcouplingmatrix(device::Transmon)
+
+Convert transmon's `gmap` into a symmetric matrix.
+"""
+function getcouplingmatrix(device::Transmon)
+    G = zeros(Float64, device.n, device.n)
+    for (quple, g) in device.gmap
+        G[quple.q1, quple.q2] = g
+        G[quple.q2, quple.q1] = g
+    end
+    return G
+end
+
+
+"""
     selectqubits(slice::AbstractVector{Int}, device::Transmon)
 
 Use only a sub-section of a device.

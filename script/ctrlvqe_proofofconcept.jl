@@ -491,7 +491,12 @@ x0[1:W,:] .= ΔΩ * (2*rand(W,n) .- 1)                        # RANDOMLY SELECTE
 x0[end,:] .= ΔΔ * (2*rand(n) .- 1) .+ device.ω              # RANDOMLY SELECTED FREQUENCIES
 x0 = vec(x0)                            # RESHAPE TO VECTOR
 
+# CALCULATE INITIAL ENERGY
+E0 = f(x0)
+println("     Initial energy: $E0")
 
+E_HF = f(zero(x0))
+println("Hartree Fock energy: $E_HF")
 
 # PLOT PULSE SHAPES AND GRADIENT SIGNALS
 pulses = constructpulses(x0)            # INITIAL PULSE OBJECTS
@@ -600,6 +605,11 @@ plot(Ω_plots, ∇Ω_plots, layout=(1,2))
 E_FCI = Λ[1]
 ψ_FCI = U[:,1]
 
-println("         FCI energy: $E_FCI")
-println("       Energy error: $(E_normalized-E_FCI)")
-println("   State infidelity: $(Utils.infidelity(ψ,ψ_FCI))")
+println("                FCI energy: $E_FCI")
+println("  Unoptimized energy error:  $(E0-E_FCI)")
+println(" Hartree Fock energy error:  $(E_HF-E_FCI)")
+println()
+println("    Optimized energy error:  $(E_normalized-E_FCI)")
+println("Optimized state infidelity:  $(Utils.infidelity(ψ,ψ_FCI))")
+println()
+println("       Energy error wrt HF:  $((E_normalized-E_FCI)/(E_HF-E_FCI))")
