@@ -105,7 +105,7 @@ In this section, we review these alternative functions and show that we really d
   But, _if_ we wanted to optimize the _true_ energy, we'd need to use the normalized energy function.
   Unlike any of the other energy functions we've considered, this one includes additional dependence on our control parameters $\bar x$, so the gradient $∂_x E$ will look different:
 
-  $$ ∂_x E_N = ∂_x \left(\frac{E}{F}\right) = \frac{∂_x E}{F} - \frac{E}{F} \frac{∂_x F}{F} $$
+$$ ∂_x E_N = ∂_x \left(\frac{E}{F}\right) = \frac{∂_x E}{F} - \frac{E}{F} \frac{∂_x F}{F} $$
 
   Conveniently, $∂_x F$ has the exact same form as $∂_x E$, except that it replaces the observable $\hat O$ with the projector $\hat Π$.
   Therefore, _even_ for this choice of energy function, the _exact_ same algorithm applies - we'll just need to do it twice.
