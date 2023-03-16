@@ -1,5 +1,5 @@
 # Energy Gradients
-##### 3/12/2023
+##### 3/16/2023
 
 In another note (`timeevolution.md`), we have discussed algorithms to simulate time evolution of a quantum-computational state under some controllable drive Hamiltonian.
 The next step in ctrl-VQE is to optimize the parameters - let's call them $\bar x$ - of the drive Hamiltonian, in order to minimize the expectation value $E$ of an observable, typically a molecular Hamiltonian.
@@ -60,21 +60,56 @@ $$ \begin{aligned} |\psi⟩ &\equiv e^{-i H_0 T} \tilde U |\psi_0⟩ \\
     &= \prod_{j=1}^{r} \left( e^{-i \hat V(t_j) \tau_j} e^{-i H_0 \tau} \right) e^{-i \hat V(t_0) \tau_0} |\psi_{\rm ref}⟩
 \end{aligned} $$
 
-NOTE: In practice, in order for a zero-pulse drive to result in a static energy, the static molecular Hamiltonian of interest would be written as an interaction operator $\tilde O$.
-In that case, the lab operator $\hat O$ would be time-dependent, including factors of $e^{\pm iH_0 T}$.
-As long as evolution time $T$ is considered constant, this has no bearing on the gradient calculations.
-
 All dependence on control parameters $\bar x$ is confined to the $\hat V(t_j)$ operators.
 
 #### Alternative Energy Functions
 
-In the near future (but not yet in this note, as of 3/12/2023), we will also consider the following more experimentally relevant functions:
-- Projected: $E = ⟨\psi| \Pi \hat O \Pi |\psi⟩$
-- Normalized: $E = ⟨\psi| \Pi \hat O \Pi |\psi⟩ / ⟨\psi|\Pi|\psi⟩$
+The "standard" energy function is $E=⟨ψ|\hat O|ψ⟩$, where $\hat O$ is a molecular Hamiltonian projected from a fermionic space (two levels) onto the computational space (ostensibly infinite levels).
+There are however a number of alternative energy functions which must be considered to make experiments practical.
+In this section, we review these alternative functions and show that we really don't need to worry about them when calculating the gradient.
+- **Interaction Frame:** $E_I = ⟨\psi| e^{-i H_0 T} \hat O e^{i H_0 T} |\psi⟩$
 
-The operator $\Pi$ projects out any components of $|\psi⟩$ outside the computational subspace, ie. "leaked states", representing measurements on $|\psi⟩$ which _must_ result in either 0 or 1.
-In fact, the projected energy function introduces no new dependence on $\bar x$, so the results from this note apply to it perfectly well.
-The normalized energy function will involve more calculus.
+  Ideally, we'd like to imagine that a computational state undergoing no drive is static, meaning the expectation value of any given fixed observable isn't changing any.
+  In reality, the computational state is still evolving under the static Hamiltonian, so measuring a "bare" molecular Hamiltonian would result in energy fluctuations roughly on the order of the qubit resonance frequencies.
+  We can (analytically) fix this by measuring in the interaction frame, ie. including the factors $e^{\pm i H_0 T}$ in the energy functional.
+  Experimentally, this is equivalent to replacing $\hat O$ in the standard energy function with a time-dependent $\hat O(T) ≡ e^{-i H_0 T} \hat O_0 e^{i H_0 T}$.
+  As long as evolution time $T$ is considered constant, this has no bearing on the gradient calculations.
+
+  NOTE: Be careful with language: $\hat O(T)$ is _not_ the standard molecular Hamiltonian rotated into the interaction frame. Rather, we assert that the standard molecular Hamiltonian is _static_ in the interaction frame, and $\hat O(T)$ rotates it into the _lab_ frame!
+
+- ***Partial* Interaction Frame:** $E_Q = ⟨\psi| e^{-i \sum h_q T} \hat O e^{i \sum h_q T} |\psi⟩$
+
+  If, as in the previous bullet, we adopted a time-dependent lab observable $\hat O(T) ≡ e^{-iH_0 T} \hat O_0 e^{iH_0 T}$, we would have to perform a rather expensive calculation to figure out how precisely to interpret the results of the quantum computer.
+  At its most general, that calculation is about as expensive as diagonalizing $\hat O_0$ directly, which is the problem we are trying to solve.
+  However, if we replace the $H_0$ in our definition of $\hat O(T)$ with _only_ those static terms $h_q$ that are single-qubit operators (eg. the resonance and anharmonicity terms in a transmon device), the calculation becomes equivalent to a single-body basis rotation.
+  In this case, our measurement results would again result in energy fluctuations, but only on the order of the qubit coupling strengths, which is much weaker and maybe negligible.
+  Note that, for the case of parametric coupling as considered by our NIST collaborators, the static Hamiltonian _only_ consists of separable terms, and there is no distinction between this and the previous bullet.
+
+  NOTE: That said, the actual measurement process typically occurs on a timescale rather larger than $T$ so I'm not quite sure what good any of this is going to do...
+  Do we have a plan for this yet?
+
+- **Projected:** $E_Π = ⟨\psi| \Pi \hat O \Pi |\psi⟩$
+
+  Analytically, $|ψ⟩$ is typically a statevector over an arbitrary number of bosonic modes.
+  Experimentally, we measure expectation values $⟨ψ|\hat O|ψ⟩$ by measuring $|ψ⟩$ in either the 0 state or the 1 state.
+  When $\hat O$ is a bare molecular Hamiltonian, projected up into the transmon space, there is no mathematical difference.
+  However, if we are applying one of the frame rotations above, this "extra layer" of projection becomes relevant.
+  Mathematically , we can include it with the operator $\Pi$, which projects out any components of $|\psi⟩$ outside the computational subspace, ie. "leaked states", leaving an unnormalized state.
+  As in the frame rotations with constant $T$, the projected energy function introduces no new dependence on our control parameters $\bar x$, so the gradient calculation doesn't change in the slightest.
+
+- **Normalized:** $E_N = ⟨\psi| \Pi \hat O \Pi |\psi⟩ / ⟨\psi|\Pi|\psi⟩$
+
+  Because the projected state $Π|ψ⟩$ is not normalized, the energies obtained aren't really the true energies - we need to include the normalization factor in the denominator.
+  Now, we don't necessarily need to include it _during_ the optimization: the normalization factor $F≡⟨\psi|\Pi|\psi⟩$ obeys $F\le1$, so the unnormalized energy minimizes to the same number.
+  Actually, this may be experimentally desirable, since it means our cost-function is implicitly penalizing pulses which induce high leakage.
+  But, _if_ we wanted to optimize the _true_ energy, we'd need to use the normalized energy function.
+  Unlike any of the other energy functions we've considered, this one includes additional dependence on our control parameters $\bar x$, so the gradient $∂_x E$ will look different:
+
+  $$ ∂_x E_N = ∂_x \left(\frac{E}{F}\right) = \frac{∂_x E}{F} - \frac{E}{F} \frac{∂_x F}{F} $$
+
+  Conveniently, $∂_x F$ has the exact same form as $∂_x E$, except that it replaces the observable $\hat O$ with the projector $\hat Π$.
+  Therefore, _even_ for this choice of energy function, the _exact_ same algorithm applies - we'll just need to do it twice.
+
 
 ### Energy Gradients
 
@@ -91,7 +126,8 @@ $$ \begin{aligned}
 
 NOTE: In $|\lambda_i⟩$ only, the product places larger times on the right.
 
-NOTE: Using the projected energy function, the definition of $|\lambda_i⟩$ is very slightly modified, but nothing else that follows is different.
+NOTE: Different choices of energy function essentially amount to different choices of $|λ_i⟩$.
+We can calculate gradients for _all_ the different energy functions in one sweep, simply by tracking multiple copies of $|λ_i⟩$.
 
 Note that $|\psi_r⟩=|\psi⟩$, $|\psi_0⟩ \ne |\psi_{\rm ref}⟩$, and $E=⟨\lambda_i|\psi_i⟩$ for all $i$.
 More importantly:
@@ -100,7 +136,7 @@ $$ ⟨\psi|\hat O \left(\partial_x |\psi⟩\right) = \sum_{i=0}^r ⟨\lambda_i| 
 
 Thus, the energy derivative becomes:
 
-$$ \partial_x E = - \sum_{i=0}^r \tau_i \left[ ⟨\lambda_i| \left( i \partial_x \hat V(t_i) \right) |\psi_i⟩ + {\rm h.t.} \right] $$
+$$ \partial_x E = \sum_{i=0}^r \tau_i \left[ ⟨\lambda_i| \left( -i \partial_x \hat V(t_i) \right) |\psi_i⟩ + {\rm h.t.} \right] $$
 
 This is the most important equation in this note.
 Pretend there is a box around it.
@@ -124,7 +160,7 @@ $$ \partial_{x_{kl}} \hat V(t) = (\partial_{x_{kl}} f_k)|_t \cdot \hat V_k(t) $$
 
 Substituting this expression into our formula for $\partial_x E$:
 
-$$ \partial_{x_{kl}} E = - \sum_{i=0}^r \tau_i \cdot (\partial_{x_{kl}} f_k)|_{t_i} \cdot \left[ ⟨\lambda_i| \left( i \hat V_k(t_i) \right) |\psi_i⟩ + {\rm h.t.} \right] $$
+$$ \partial_{x_{kl}} E = \sum_{i=0}^r \tau_i \cdot (\partial_{x_{kl}} f_k)|_{t_i} \cdot \left[ ⟨\lambda_i| \left( -i \hat V_k(t_i) \right) |\psi_i⟩ + {\rm h.t.} \right] $$
 
 Now we see the convenience of specifying $f_k$ is real; it factors out of the brackets.
 The quantity $(\partial_{x_{kl}} f_k)|_{t_i}$ depends on the precise form of $f_k$ but will generally be easy to compute analytically with elementary calculus.
@@ -132,11 +168,11 @@ The quantity $(\partial_{x_{kl}} f_k)|_{t_i}$ depends on the precise form of $f_
 Thus, the quantity in brackets _does not depend on l_, and only needs to be calculated once for the entire set of parameters $\bar x_k$.
 Let us go ahead and explicitly define this quantity as the _gradient signal_ $\vec \phi_k$ which is a time series with individual elements $\phi_{ik}$:
 
-$$ \phi_{ik} \equiv \left[ ⟨\lambda_i| \left( i \hat V_k(t_i) \right) |\psi_i⟩ + {\rm h.t.} \right] $$
+$$ \phi_{ik} \equiv \left[ ⟨\lambda_i| \left( -i \hat V_k(t_i) \right) |\psi_i⟩ + {\rm h.t.} \right] $$
 
 For Hilbert spaces tractable in a classical computer, each of the time series $\vec \phi_k$ can be computed in a single sweep, giving access to _all_ the gradients $\partial_{x_{kl}} E$:
 
-$$ \partial_{x_{kl}} E = - \sum_{i=0}^r \tau_i \cdot (\partial_{x_{kl}} f_k)|_{t_i} \cdot \phi_{ik} $$
+$$ \partial_{x_{kl}} E = \sum_{i=0}^r \tau_i \cdot (\partial_{x_{kl}} f_k)|_{t_i} \cdot \phi_{ik} $$
 
 #### RWA Approximation with Fixed Channels
 
@@ -165,15 +201,15 @@ $$ \begin{aligned}
 Thus, we also have two distinct gradient signals for each $k$:
 
 $$ \begin{aligned}
-\phi_{i\alpha k} &\equiv \left[ ⟨\lambda_i| \left( i \hat V_{\alpha k}(t_i) \right) |\psi_i⟩ + {\rm h.t.} \right] \\
-\phi_{i\beta k} &\equiv \left[ ⟨\lambda_i| \left( i \hat V_{\beta k}(t_i) \right) |\psi_i⟩ + {\rm h.t.} \right]
+\phi_{i\alpha k} &\equiv \left[ ⟨\lambda_i| \left( -i \hat V_{\alpha k}(t_i) \right) |\psi_i⟩ + {\rm h.t.} \right] \\
+\phi_{i\beta k} &\equiv \left[ ⟨\lambda_i| \left( -i \hat V_{\beta k}(t_i) \right) |\psi_i⟩ + {\rm h.t.} \right]
 \end{aligned} $$
 
 For all the parameters appearing in the scalar signals $\Omega_k$, the energy derivatives are hardly distinct from the previous section.
 
 $$ \begin{aligned}
-\partial_{x_{\alpha kl}} E = - \sum_{i=0}^r \tau_i \cdot (\partial_{x_{\alpha kl}} \alpha_k)|_{t_i} \cdot \phi_{i\alpha k} \\
-\partial_{x_{\beta kl}} E = - \sum_{i=0}^r \tau_i \cdot (\partial_{x_{\beta kl}} \beta_k)|_{t_i} \cdot \phi_{i\beta k}
+\partial_{x_{\alpha kl}} E = \sum_{i=0}^r \tau_i \cdot (\partial_{x_{\alpha kl}} \alpha_k)|_{t_i} \cdot \phi_{i\alpha k} \\
+\partial_{x_{\beta kl}} E = \sum_{i=0}^r \tau_i \cdot (\partial_{x_{\beta kl}} \beta_k)|_{t_i} \cdot \phi_{i\beta k}
 \end{aligned} $$
 
 Now let us consider the gradient with respect to the channel frequency $\nu_k$:
@@ -187,6 +223,6 @@ $$ \begin{aligned}
 Conveniently, the exact same operators turn out to be relevant - they are now just modulated by an additional factor of t, which can be factored out, and they sort of swap places.
 Thus, we may calculate the analytical gradient of the energy with respect to pulse frequencies for essentially zero overhead, using the same gradient signals we have already obtained for complex scalar signals:
 
-$$ \partial_{\nu_k} E = - \sum_{i=0}^r \tau_i \cdot t_i \cdot \left( \alpha_k|_{t_i} \cdot \phi_{i\beta k} - \beta_k|_{t_i} \cdot \phi_{i\alpha k} \right) $$
+$$ \partial_{\nu_k} E = \sum_{i=0}^r \tau_i \cdot t_i \cdot \left( \alpha_k|_{t_i} \cdot \phi_{i\beta k} - \beta_k|_{t_i} \cdot \phi_{i\alpha k} \right) $$
 
 We now have analytical formulae for every control parameter, _if_ we can only measure the gradient signals $\vec \phi_{\alpha k}$, $\vec \phi_{\beta k}$!
