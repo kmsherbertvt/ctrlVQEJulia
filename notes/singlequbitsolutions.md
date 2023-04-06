@@ -1,5 +1,6 @@
 # Time Evolution: Single Qubit Solutions
 ##### 11/29/2022
+##### Updated 4/6/2023
 
 Given an input state $|ψ_0⟩$ subject to a Hamiltonian $\hat H=\hat H_0+\hat V(t)$ , what is the state $|ψ(T)⟩$?
 In this notebook, we will use a single transmon qubit:
@@ -11,6 +12,14 @@ with a time-dependent EM field:
 $$\hat V(t) = Ω (e^{iνt} a + e^{-iνt} a^†) $$
 
 The amplitude $Ω$ and frequency $ν$ may in general be time-dependent, although the first (and currently only) examples will take them as constant for the duration of the evolution (ie. a basic square pulse).
+
+The above formulation assumes $ν$ and $Ω$ are real.
+We are stuck with $ν$, but we *could* include a complex phase in $Ω$.
+In that case, we should write:
+
+$$\hat V(t) = Ω e^{iνt} a + \bar Ω e^{-iνt} a^†) $$
+
+Throughout the derivation, we will use the real version of $Ω$, but at the end I'll point out what happens if $Ω$ is complex.
 
 The operator $a$ is the bosonic annihilation operator, defined by the following action:
 
@@ -256,7 +265,7 @@ Now we can put in $c_0(0)$ and $\dot c_0(0)$ to create a system of two equations
 
 $$ \begin{aligned}
 	⟨0|ψ_0⟩ &= A_+ + A_- \\
--iΩ ⟨1|ψ_0⟩ &= iΔ \frac{η - 1}{2} A_+ - iΔ \frac{η + 1}{2} A_- 
+-iΩ ⟨1|ψ_0⟩ &= iΔ \frac{η - 1}{2} A_+ - iΔ \frac{η + 1}{2} A_-
 \end{aligned} $$
 
 I will let the reader confirm the following solution:
@@ -284,6 +293,10 @@ $$ \begin{aligned} c_1(t)
 	&+ \left(⟨1|ψ_0⟩ \frac{η - 1}{2η} - ⟨0|ψ_0⟩ \frac{χ}{2η}\right)
 		e^{iΔ \frac{η + 1}{2}t}
 \end{aligned} $$
+
+If $Ω$ is complex, $η$ is redefined sensibly as $\sqrt{1+|χ|^2}$.
+The only other change we need to note is that the two differential equations now include a switch between $Ω \leftrightarrow \bar Ω$.
+Thus, we simply replace each $χ$ in $c_1(t)$ with $\bar χ$.
 
 ## Basic Square Pulse: $m=3$
 This problem will be considered a direct sequel to the $m=2$ problem, so I won't re-state things I worked out in detail there.
@@ -323,6 +336,9 @@ $$ \hat V_I(t) = \left[\begin{array}{cc}
     V_1 & 0 & \overline V_2 \\
     0 & V_2 & 0
 \end{array}\right] $$
+
+Note that the complex-ness of $Ω$ is just folded into the complex-ness of $V_i$,
+	so actually the results below apply perfectly well to complex amplitudes.
 
 ### Step Two: Defining the System of Equations
 Expanding out Schrödinger's equation:
