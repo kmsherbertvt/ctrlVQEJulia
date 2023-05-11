@@ -95,8 +95,8 @@ In fact there are more complicated ways to Trotterize which have better error sc
   but I don't actually know how they interact with the time-ordering operator,
   so they're best omitted from this discussion.
 
-#### Interaction Picture
-For time-dependent perturbations, it is helpful to adopt instead the "interaction picture", which focuses on a slightly-modified equation:
+#### Interaction Picture Formalism
+For time-dependent perturbations, it is helpful to apply the "interaction picture" formalism, which focuses on a somewhat different equation:
 
 $$ i \frac{∂}{∂t} |ψ_I⟩ = \hat V_I |ψ_I⟩ $$
 
@@ -112,7 +112,15 @@ $$\begin{array}{rl}
 Vaguely speaking, $|ψ_I⟩$ represents the state $|ψ⟩$ as if it were not subject to the time-independent $\hat H_0$.
 More precisely, and more usefully, you can solve for $|ψ⟩$ simply by evolving $|ψ_I⟩$ in time subject _only_ to the time-independent $\hat H_0$.
 
-We do this because, at least for oscillating field problems, the system of differential equations tends to look simpler in the interaction picture.
+You can also think of this as a relativistic frame shift.
+In the default reference frame, our system is "at rest" when nothing at all acts on it.
+We call this the "lab frame". I don't think that's a very good name, but oh well.
+Using $H_0$ as our reference in the interaction picture formalism,
+  the state $|ψ_I⟩$ is "at rest" with respect to the static Hamiltonian of the device.
+We call this the "rotating frame".
+
+We do this transformation because, at least for oscillating field problems,
+  the system of differential equations tends to look simpler in the interaction picture.
 Therefore, we will synthesize the results of this section and the previous to form our two main time-evolution methods:
 
 ##### Time Evolution by Solving a System of Linear Differential Equations
