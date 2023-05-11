@@ -1,5 +1,5 @@
 # Energy Functions
-##### 5/9/2023
+##### 5/11/2023
 
 In another note (`timeevolution.md`), we have discussed algorithms to simulate time evolution of a quantum-computational state under some controllable drive Hamiltonian.
 The next step in ctrl-VQE is to measure the expectation value $E$ of an observable, typically a molecular Hamiltonian.
@@ -41,16 +41,20 @@ There are, once again, multiple strategies for doing so.
 
 Neglecting for the time being the latter problem of reference frames, let us survey strategies for projecting out unwanted states.
 
-#### Unnormalized
+#### Projected
+
+While all these strategies are projection strategies,
+    I consider this first approach to be the "default" - the most intuitive and also the most desirable when it can be realized experimentally.
+Therefore, I've christened it the "Projected" strategy.
 
 Let the single-qubit projection operator $π≡|0⟩⟨0|+|1⟩⟨1|$, and the $n$-qubit projection operator $Π≡π^{⊗n}$.
-Now let the unnormalized logical state $|Ψ_U⟩$ be:
+Now let the "projected" logical state $|Ψ_P⟩$ be the physical state $|ψ⟩$ restricted to the logical Hilbert space:
 
-$$ |Ψ_U⟩ ≡ Π|ψ⟩ $$
+$$ |Ψ_Π⟩ ≡ Π|ψ⟩ $$
 
 If the physical state $|ψ⟩$ has any support on states outside the logical Hilbert space,
-    this projection results in an _unnormalized_ logical state $|Ψ_U⟩$,
-    meaning the expectation value $⟨Ψ_U|\hat O|Ψ_U⟩$ is not a _physically meaningful_ energy.
+    this projection results in an _unnormalized_ logical state $|Ψ_Π⟩$,
+    meaning the expectation value $⟨Ψ_Π|\hat O|Ψ_Π⟩$ is not a _physically meaningful_ energy.
 
 _However_, that is actually okay for typical VQE experiments.
 The unnormalization of $|Ψ⟩$ always serves to bring $E$ closer to zero than it otherwise would be.
@@ -75,7 +79,7 @@ Thus, in principle, optimizing an energy derived from this projection may well l
 
 #### Biased
 
-The "Unnormalized" and "Normalized" strategies are well-suited to numerical simulations,
+The "Projected" and "Normalized" strategies are well-suited to numerical simulations,
     but they may or may not be experimentally realizable, depending on the measurement protocol.
 
 Let's model the measurement protocol as a function $M$ which takes some physical state
@@ -91,14 +95,14 @@ There are at least three possibilities, depending on the sophistication of one's
 2. The protocol discriminates logical states from non-logical states: $M(|ψ⟩)$ could be 0, 1, or FAILURE.
 3. The protocol artificially interprets non-logical states as logical states: $M(|ψ⟩)$ could be 0 or 1 only.
 
-In either of the first two possibilities, the "Unnormalized" and "Normalized" strategies are both viable.
+In either of the first two possibilities, the "Projected" and "Normalized" strategies are both viable.
 Unfortunately, the third possibility seems to be the more common one.
 A proper treatment would require detailed knowledge of the measurement protocol,
     and the relative probabilities that each physical basis state is measured as each binary vector,
     but a somewhat justifiable heuristic is to assume that any non-logical states are measured as 1.
 Thus, any leakage artificially biases the expectation value toward more "occupied" orbitals.
 
-Using this heuristic, we can define the biased single-qubit projection operator $π_B≡0⟩⟨0| + \sum_{i=1}^{∞}|1⟩⟨i|$,
+Using this heuristic, we can define the biased single-qubit projection operator $π_B≡|0⟩⟨0| + \sum_{i=1}^{∞}|1⟩⟨i|$,
     and the biased $n$-qubit projection operator as $Π_B≡π_B^{⊗n}$.
 Then the biased logical state $|Ψ_B⟩$ is:
 
@@ -130,7 +134,7 @@ If the logical state is to be at rest with respect to the rotating frame,
 
 $$ |Ψ⟩ = Π |ψ_R⟩ $$
 
-(I'm writing just $Π$ here for the "Unnormalized" projection strategy,
+(I'm writing just $Π$ here for the "Projected" strategy,
     but you may include a normalization factor or substitute $Π→Π_B$,
     according to your preferred strategy.)
 
@@ -209,7 +213,7 @@ In our case, the only subsequent pulses are those used in measurement.
 
 Up to now, we have had to perform the frame rotation in the physical Hilbert space,
     and then project onto the logical Hilbert space.
-Let us now restrict ourselves to the "Unnormalized" projection strategy,
+Let us now restrict ourselves to the "Projected" strategy,
     and consider the special case where $[Π, H_0]=0$.
 (Note that the model transmon Hamiltonian from above, with $g_{pq}≃0$, satisfies this condition.)
 Then, defining $H_Π ≡ Π H_0 Π$ as the restriction of $H_0$ to the logical Hilbert space,
@@ -224,11 +228,11 @@ $$ E = ⟨ψ| Π^\dagger e^{-iT H_Π} \hat O e^{iT H_Π} Π |ψ⟩ $$
 
 We can write this in a more familiar way as follows:
 
-$$ \begin{array}{rl}
+$$ \begin{align}
 E &= ⟨Ψ|\tilde O_T|Ψ⟩ \\
 |Ψ⟩ &≡ Π|ψ⟩ \\
 \tilde O_T &≡ e^{-iT H_Π} \hat O e^{iT H_Π}
-\end{array} $$
+\end{align} $$
 
 Now we are taking our logical state to be the physical state in the _lab frame_,
     projected to the logical Hilbert space,

@@ -1,5 +1,5 @@
 # Energy Gradients
-##### 3/16/2023
+##### 5/11/2023
 
 In a previous note (`timeevolution.md`), we have discussed algorithms to simulate time evolution of a quantum-computational state under some controllable drive Hamiltonian.
 In another note (`energyfunctions.md`),
@@ -10,7 +10,7 @@ To that end, we want to characterize the gradients $∂_x E$, for each $x∊\bar
 
 Before we leap into gradients, we'll briefly review the relevant parts of the previous two notes.
 
-#### Energy Functions
+### Energy Functions
 
 The energy function discussed in `energyfunctions.md` was written as:
 
@@ -49,7 +49,7 @@ Conveniently, $∂_x F$ has the exact same form as $∂_x E$, except that it rep
 Therefore, _even_ for the "Normalized" projection strategy,
   we can focus on gradients of a function $E=⟨ψ|O|ψ⟩$; we'll just need to do it twice.
 
-#### Time Evolution, Abridged
+### Time Evolution, Abridged
 
 The wavefunction $|ψ⟩$ is the time-evolved state we studied in `timeevolution.md`.
 Please see that note for the full treatment; here I will present the bare minimum needed to calculate the gradient:
@@ -104,31 +104,57 @@ Now we wish to consider partial derivatives of the energy $E$ with respect to in
 
 $$ \partial_x E = ∂_x ⟨ψ|O|ψ⟩ = ⟨ψ|O \left(\partial_x |ψ⟩\right) + {\rm h.t.} $$
 
-To break down the braket, let us define the following kets:
+The only dependence on $x$ in $|ψ⟩$ is contained in factors $e^{-iV(t_j) τ_j}$,
+  so $∂_x |ψ⟩$ is a sum over terms containing single factors $∂_x e^{-iV(t_j) τ_j}$.
+When the $V(t_j)$ and $∂_x V(t_j)$ commute, this derivative is easily written:
+
+$$ ∂_x e^{-iV(t_j) τ_j} = ∂_x [-i V(t_j) τ_j] e^{-iV(t_j) τ_j} $$
+
+The commutation condition does hold in the prototypical case where we apply just one real-valued pulse on each qubit.
+Unfortunately, it breaks down with multiple drives per qubit, and with complex-valued pulses.
+Because we are working with small time-steps,
+  the product formula is still approximately accurate up to error $O(τ^2)$,
+  no doubt sufficient for any single time-step,
+  but $∂_x |ψ⟩$ includes a sum over _every_ time step,
+  meaning we'd best adopt a higher-order product formula.
+We can achieve accuracy up to $O(τ^3)$ by adopting the symmetric formula:
+
+$$ ∂_x e^{-iV(t_j) τ_j} = e^{-iV(t_j) τ_j/2} ∂_x [-i V(t_j) τ_j] e^{-iV(t_j) τ_j/2} $$
+
+Even the symmetric product formula incurs a non-negligible amount of error when the number of Trotter steps is too small,
+  especially for variational parameters which affect the drive for its entire duration.
+I'm given to understand an _exact_ expression for this derivative is:
+
+$$ ∂_x e^{-iV(t_j) τ_j} = \int_0^1 e^{-iV(t_j) τ_j λ} ∂_x [-i V(t_j) τ_j] e^{-iV(t_j) τ_j (1-λ)} dλ $$
+
+It may be interesting to see whether we could tackle this integral explicitly.
+But for now, let's just use a decent number of Trotter steps.
+
+To write out $∂_x E$ neatly, let us define the ket $|ψ_i⟩$ and its co-state $|σ_i⟩$:
 
 $$ \begin{aligned}
-|\lambda_i⟩ &\equiv \prod_{j=i+1}^{r} \left( e^{i H_0 \tau} e^{i \hat V(t_j) \tau_j} \right) O |ψ⟩ \\
-|ψ_i⟩ &\equiv \prod_{j=1}^{i} \left( e^{-i \hat V(t_j) \tau_j} e^{-i H_0 \tau} \right) e^{-i \hat V(t_0) \tau_0} |ψ_{\rm ref}⟩
+|σ_i⟩ &\equiv \prod_{j=i}^{r-1} \left( e^{i \hat V(t_j) \tau_j/2} e^{i H_0 τ} e^{i \hat V(t_{j+1}) \tau_{j+1}/2}\right) e^{i \hat V(t_r) τ_r/2} O |ψ⟩ \\
+|ψ_i⟩ &\equiv \prod_{j=1}^{i} \left( e^{-i \hat V(t_j) \tau_j/2} e^{-i H_0 τ} e^{-i \hat V(t_{j-1}) \tau_{j-1}/2}\right) e^{-i \hat V(t_0) τ_0/2} |ψ_{\rm ref}⟩
 \end{aligned} $$
 
-NOTE: In $|\lambda_i⟩$ only, the product places larger times on the right.
+NOTE: In $|σ_i⟩$ only, the product places larger times on the right.
 
-NOTE: Different choices of energy function essentially amount to different choices of $|λ_i⟩$, using different $O$.
-We can calculate gradients for _all_ the different energy functions in one sweep, simply by tracking multiple copies of $|λ_i⟩$.
+NOTE: Different choices of energy function essentially amount to different choices of $|σ_i⟩$, using different $O$.
+We can calculate gradients for _all_ the different energy functions in one sweep, simply by tracking multiple copies of $|σ_i⟩$.
 
-Note that $|ψ_r⟩=|ψ⟩$, $|ψ_0⟩ \ne |ψ_{\rm ref}⟩$, and $E=⟨\lambda_i|ψ_i⟩$ for all $i$.
-More importantly:
-
-$$ ⟨ψ|O \left(\partial_x |ψ⟩\right) = \sum_{i=0}^r ⟨\lambda_i| \left( -i \tau_i \partial_x \hat V(t_i) \right) |ψ_i⟩ $$
-
+Essentially, $|ψ_i⟩$ is the time-evolved state, "frozen" in the middle of applying the $i$-th drive operator,
+  and $|σ_i⟩$ is defined so that $E=⟨σ_i|ψ_i⟩$ for all $i$.
 Thus, the energy derivative becomes:
 
-$$ \partial_x E = \sum_{i=0}^r \tau_i \left[ ⟨\lambda_i| \left( -i \partial_x \hat V(t_i) \right) |ψ_i⟩ + {\rm h.t.} \right] $$
+$$ \partial_x E = \sum_{i=0}^r \tau_i \left[ ⟨σ_i| \left( -i \partial_x \hat V(t_i) \right) |ψ_i⟩ + {\rm h.t.} \right] $$
 
 This is the most important equation in this note.
 Pretend there is a box around it.
 
-Next, we're going to break this down for two special forms of the drive operator.
+### Examples
+
+In the rest of this note, we'll break down the formula for $∂_x E$ for two special forms of the drive operator,
+  in order to elucidate the utility of a so-called "gradient signal", also known as the switching function.
 
 #### Control Signals
 
@@ -147,7 +173,7 @@ $$ \partial_{x_{kl}} \hat V(t) = (\partial_{x_{kl}} f_k)|_t \cdot \hat V_k(t) $$
 
 Substituting this expression into our formula for $\partial_x E$:
 
-$$ \partial_{x_{kl}} E = \sum_{i=0}^r \tau_i \cdot (\partial_{x_{kl}} f_k)|_{t_i} \cdot \left[ ⟨\lambda_i| \left( -i \hat V_k(t_i) \right) |ψ_i⟩ + {\rm h.t.} \right] $$
+$$ \partial_{x_{kl}} E = \sum_{i=0}^r \tau_i \cdot (\partial_{x_{kl}} f_k)|_{t_i} \cdot \left[ ⟨σ_i| \left( -i \hat V_k(t_i) \right) |ψ_i⟩ + {\rm h.t.} \right] $$
 
 Now we see the convenience of specifying $f_k$ is real; it factors out of the brackets.
 The quantity $(\partial_{x_{kl}} f_k)|_{t_i}$ depends on the precise form of $f_k$ but will generally be easy to compute analytically with elementary calculus.
@@ -155,7 +181,7 @@ The quantity $(\partial_{x_{kl}} f_k)|_{t_i}$ depends on the precise form of $f_
 Thus, the quantity in brackets _does not depend on l_, and only needs to be calculated once for the entire set of parameters $\bar x_k$.
 Let us go ahead and explicitly define this quantity as the _gradient signal_ $\vec \phi_k$ which is a time series with individual elements $\phi_{ik}$:
 
-$$ \phi_{ik} \equiv \left[ ⟨\lambda_i| \left( -i \hat V_k(t_i) \right) |ψ_i⟩ + {\rm h.t.} \right] $$
+$$ \phi_{ik} \equiv \left[ ⟨σ_i| \left( -i \hat V_k(t_i) \right) |ψ_i⟩ + {\rm h.t.} \right] $$
 
 For Hilbert spaces tractable in a classical computer, each of the time series $\vec \phi_k$ can be computed in a single sweep, giving access to _all_ the gradients $\partial_{x_{kl}} E$:
 
@@ -188,8 +214,8 @@ $$ \begin{aligned}
 Thus, we also have two distinct gradient signals for each $k$:
 
 $$ \begin{aligned}
-\phi_{i\alpha k} &\equiv \left[ ⟨\lambda_i| \left( -i \hat V_{\alpha k}(t_i) \right) |ψ_i⟩ + {\rm h.t.} \right] \\
-\phi_{i\beta k} &\equiv \left[ ⟨\lambda_i| \left( -i \hat V_{\beta k}(t_i) \right) |ψ_i⟩ + {\rm h.t.} \right]
+\phi_{i\alpha k} &\equiv \left[ ⟨σ_i| \left( -i \hat V_{\alpha k}(t_i) \right) |ψ_i⟩ + {\rm h.t.} \right] \\
+\phi_{i\beta k} &\equiv \left[ ⟨σ_i| \left( -i \hat V_{\beta k}(t_i) \right) |ψ_i⟩ + {\rm h.t.} \right]
 \end{aligned} $$
 
 For all the parameters appearing in the scalar signals $\Omega_k$, the energy derivatives are hardly distinct from the previous section.
